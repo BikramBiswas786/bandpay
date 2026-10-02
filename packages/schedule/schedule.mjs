@@ -25,7 +25,7 @@ const due = new Date(Date.now() + dueInSeconds * 1000);
 
 const release = new ContractExecuteTransaction()
   .setContractId(ContractId.fromString(contractId))
-  .setGas(300_000)
+  .setGas(1_000_000)
   .setFunction("release", new ContractFunctionParameters().addUint256(Number(planId)));
 
 const schedule = new ScheduleCreateTransaction()
