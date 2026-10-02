@@ -23,28 +23,41 @@ function labScenarios(live) {
   const supraAge =
     live && live.supra && Number.isFinite(live.supra.ageSec) ? live.supra.ageSec : 30;
   const haveLive = Boolean(live && live.chainlink && live.supra);
+  const chainFresh = chainlinkPrice > 0 && chainAge <= HOUR;
+  const supraFresh = supraPrice > 0 && supraAge <= HOUR;
   const chain = quote(chainlinkPrice, chainAge);
   const supra = quote(supraPrice, supraAge);
+  const freshChain = quote(chainlinkPrice, 30);
+  const freshSupra = quote(supraPrice, 30);
 
   const both = decide({ chainlink: chain, supra, minPrice: 0.05, maxPrice: 0.2 });
   const oneStale = decide({
     chainlink: quote(chainlinkPrice, 7200),
-    supra,
+    supra: freshSupra,
     minPrice: 0.05,
     maxPrice: 0.2,
   });
   const disagree = decide({
-    chainlink: chain,
+    chainlink: freshChain,
     supra: quote(chainlinkPrice * 1.05, 30),
     minPrice: 0.05,
     maxPrice: 1,
   });
-  const outside = decide({ chainlink: chain, supra, minPrice: 1, maxPrice: 2 });
+  const outside = decide({ chainlink: freshChain, supra: freshSupra, minPrice: 1, maxPrice: 2 });
+  const liveTitle = !haveLive
+    ? "Both feeds fresh"
+    : !chainFresh && supraFresh
+      ? "Live: Chainlink stale, Supra used"
+      : chainFresh && !supraFresh
+        ? "Live: Supra stale, Chainlink used"
+        : !chainFresh && !supraFresh
+          ? "Live: no fresh feed"
+          : "Both feeds fresh";
 
   return [
     {
       id: "fresh",
-      title: "Both feeds fresh",
+      title: liveTitle,
       kind: haveLive ? "live" : "example",
       result: line(both, "Waiting for the feeds."),
       ok: Boolean(both.ok),

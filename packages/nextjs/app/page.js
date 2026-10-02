@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { decide } from "../lib/decide";
 import { labScenarios } from "../lib/lab";
+import { bandError } from "../lib/band";
 import {
   balanceOf,
   callAction,
@@ -85,6 +86,7 @@ export default function Page() {
 
   const scenarios = useMemo(() => labScenarios(feeds), [feeds]);
   const dueSeconds = Math.max(0, Math.round(Number(minutes) || 0) * 60);
+  const formError = bandError({ amount, minutes, min, max });
   const command = commandFor({
     amount,
     min,
@@ -233,6 +235,7 @@ export default function Page() {
   }
 
   async function onFund() {
+    if (formError) throw new Error(formError);
     const { eth, address } = await ensure();
     const result = await fund(eth, {
       from: address,
@@ -248,6 +251,21 @@ export default function Page() {
     );
     setReload((value) => value + 1);
     await remember(address);
+  }
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("view");
+    if (next === "lab" || next === "chain" || next === "sign" || next === "schedule") setView(next);
+    const scenario = params.get("case");
+    if (scenario) setPicked(scenario);
+  }, []);
+
+  function openView(id) {
+    setView(id);
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", id);
+    window.history.replaceState(null, "", url);
   }
 
   async function onConnect() {
@@ -290,6 +308,9 @@ export default function Page() {
         <div className="brand">
           <span className="mark">Bandpay</span>
           <span className="net">Testnet</span>
+          <a className="repo" href="https://github.com/BikramBiswas786/bandpay">
+            GitHub
+          </a>
         </div>
         <div className="price-pill">
           <span>HBAR/USD</span>
@@ -305,6 +326,9 @@ export default function Page() {
           {account ? `${shortAccount(account)} · ${balance || "…"}` : "Connect"}
         </button>
       </header>
+      <p className="status" aria-live="polite">
+        {activity[0] ? `${activity[0].title}. ${activity[0].detail}` : "The lab needs no key."}
+      </p>
       <div className="frame">
         <nav className="nav">
           {[
@@ -317,7 +341,8 @@ export default function Page() {
               key={id}
               type="button"
               className={view === id ? "on" : ""}
-              onClick={() => setView(id)}
+              aria-pressed={view === id}
+              onClick={() => openView(id)}
             >
               {label}
             </button>
@@ -332,7 +357,14 @@ export default function Page() {
                     <button
                       type="button"
                       className={item.id === active.id ? "on" : ""}
-                      onClick={() => setPicked(item.id)}
+                      aria-pressed={item.id === active.id}
+                      onClick={() => {
+                        setPicked(item.id);
+                        const url = new URL(window.location.href);
+                        url.searchParams.set("view", "lab");
+                        url.searchParams.set("case", item.id);
+                        window.history.replaceState(null, "", url);
+                      }}
                     >
                       <i className={item.ok ? "dot ok" : "dot bad"} />
                       <span>{item.title}</span>
@@ -346,7 +378,9 @@ export default function Page() {
                   {active.kind}
                 </p>
                 <h1>{active.title}</h1>
-                <p className={active.ok ? "verdict ok" : "verdict bad"}>{active.result}</p>
+                <p className={active.ok ? "verdict ok" : "verdict bad"} aria-live="polite">
+                  {active.result}
+                </p>
                 <p className="meta">
                   The band is the HBAR price, even when the escrow is an HTS token.
                 </p>
@@ -522,7 +556,9 @@ export default function Page() {
                   />
                 </label>
               </div>
-              {decision ? (
+              {formError ? (
+                <p className="verdict bad">{formError}</p>
+              ) : decision ? (
                 <p className={decision.ok ? "verdict ok" : "verdict bad"}>
                   {decision.ok
                     ? `Would pay from ${decision.source} at ${decision.price.toFixed(4)} USD.`
@@ -533,7 +569,7 @@ export default function Page() {
                 <button
                   type="button"
                   className="primary"
-                  disabled={Boolean(busy)}
+                  disabled={Boolean(busy) || Boolean(formError)}
                   onClick={() => run("fund", onFund)}
                 >
                   {busy === "fund" ? "Waiting…" : "Fund this band"}
@@ -642,9 +678,7 @@ function scheduleLine(item) {
 }
 
 function money(value) {
-  if (!Number.isFinite(value)) return "0";
-  if (value < 0.000001) return "0";
-  if (value >= 100) return value.toFixed(0);
+  if (!Number.isFinite(value)) return "0.00";
   return value.toFixed(2);
 }
 

@@ -467,6 +467,28 @@ details.section summary {
 
 .app {
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.status {
+  margin: 0;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--line);
+  color: var(--mute);
+  font-size: 0.88rem;
+}
+
+.repo {
+  margin-left: 10px;
+  font-size: 0.85rem;
+}
+
+.frame {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  min-height: calc(100vh - 96px);
+  max-width: 100%;
 }
 
 .top {
@@ -500,12 +522,6 @@ details.section summary {
   font-weight: 500;
 }
 
-.frame {
-  display: grid;
-  grid-template-columns: 168px 1fr;
-  min-height: calc(100vh - 58px);
-}
-
 .nav {
   display: flex;
   flex-direction: column;
@@ -530,6 +546,7 @@ details.section summary {
 .stage {
   padding: 22px 28px 64px;
   max-width: 1040px;
+  min-width: 0;
 }
 
 .stage h1 {
@@ -636,15 +653,25 @@ details.section summary {
   .split,
   .top {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .top {
+    width: 100%;
   }
   .price-pill {
     margin-left: 0;
+    justify-self: start;
   }
   .nav {
     flex-direction: row;
     border-right: 0;
     border-bottom: 1px solid var(--line);
     overflow-x: auto;
+  }
+  .stage {
+    padding: 16px;
+  }
+  .command {
+    white-space: pre-wrap;
   }
 }

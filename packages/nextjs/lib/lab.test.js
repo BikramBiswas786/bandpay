@@ -33,6 +33,18 @@ test("a 1 to 2 dollar band refuses the live HBAR price", () => {
   assert.match(row.result, /Outside/);
 });
 
+test("a stale live Chainlink is named as stale, and disagree still refuses", () => {
+  const stale = {
+    chainlink: { price: 0.0996, ageSec: 3819 },
+    supra: { price: 0.1046, ageSec: 20 },
+  };
+  const fresh = labScenarios(stale).find((item) => item.id === "fresh");
+  const disagree = labScenarios(stale).find((item) => item.id === "disagree");
+  assert.match(fresh.title, /Chainlink stale/);
+  assert.match(fresh.result, /supra/);
+  assert.equal(disagree.ok, false);
+  assert.match(disagree.result, /bps/);
+});
 test("an early schedule is named TooEarly and is not a price result", () => {
   const row = labScenarios(live).find((item) => item.id === "early");
   assert.match(row.result, /TooEarly/);
