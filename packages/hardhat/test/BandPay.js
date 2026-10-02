@@ -88,4 +88,17 @@ describe("BandPay", function () {
     await band.release(0);
     expect(await token.balanceOf(recipient.address)).to.equal(50n);
   });
+
+  it("associates through the HTS precompile and reverts on any other code", async function () {
+    const { band } = await setup();
+    const Ok = await ethers.getContractFactory("MockHTS");
+    const Bad = await ethers.getContractFactory("MockHTSReject");
+    const ok = await Ok.deploy();
+    const bad = await Bad.deploy();
+    const token = ethers.Wallet.createRandom().address;
+    await ethers.provider.send("hardhat_setCode", ["0x0000000000000000000000000000000000000167", await ethers.provider.getCode(await ok.getAddress())]);
+    await band.associate(token);
+    await ethers.provider.send("hardhat_setCode", ["0x0000000000000000000000000000000000000167", await ethers.provider.getCode(await bad.getAddress())]);
+    await expect(band.associate(token)).to.be.revertedWithCustomError(band, "AssociateFailed");
+  });
 });

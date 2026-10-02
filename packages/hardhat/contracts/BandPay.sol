@@ -20,6 +20,10 @@ interface ISupraSValueFeed {
     function getSvalue(uint256 pairIndex) external view returns (PriceFeed memory);
 }
 
+interface IHederaTokenService {
+    function associateToken(address account, address token) external returns (int64 responseCode);
+}
+
 interface IERC20 {
     function transfer(address to, uint256 amount) external returns (bool);
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
@@ -61,6 +65,11 @@ contract BandPay {
     error OutsideBand(int256 price);
     error TransferFailed();
     error ZeroAmount();
+    error AssociateFailed(int64 code);
+
+    /// @dev Hedera response code SUCCESS. Anything else means the token was not associated.
+    int64 internal constant HTS_SUCCESS = 22;
+    address internal constant HTS = address(uint160(0x167));
 
     constructor(address chainlink_, address supraFeed_, uint256 supraPairId_, uint256 maxAge_) {
         if (chainlink_ == address(0) || supraFeed_ == address(0) || maxAge_ == 0) revert BadState();
@@ -102,6 +111,18 @@ contract BandPay {
         if (price < plan.minPrice || price > plan.maxPrice) revert OutsideBand(price);
         plan.paid = true;
         _send(plan.token, plan.recipient, plan.amount);
+    }
+
+    /// @notice Call once per HTS token, before fundToken. The contract cannot hold the token until this succeeds.
+    ///         Removing it leaves an escrow that reverts on every token, because Hedera will not credit an unassociated account.
+    function associate(address token) external {
+        if (token == address(0)) revert ZeroAmount();
+        (bool ok, bytes memory data) = HTS.call(
+            abi.encodeWithSelector(IHederaTokenService.associateToken.selector, address(this), token)
+        );
+        if (!ok || data.length < 32) revert AssociateFailed(-1);
+        int64 code = abi.decode(data, (int64));
+        if (code != HTS_SUCCESS) revert AssociateFailed(code);
     }
 
     function cancel(uint256 id) external {

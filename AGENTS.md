@@ -9,13 +9,19 @@ One job. A payer escrows HBAR or an HTS facade token. A wait-for-expiry schedule
 - Chainlink fresh and Supra fresh: they must agree within 300 bps, or the call reverts. Chainlink's price is the one compared to the band.
 - One fresh source is enough. Chainlink first, then Supra.
 - Neither fresh: revert. The escrow stays until `cancel`.
-- Supra pair index is 75 (HBAR/USDT). Timestamps above 1e11 are treated as milliseconds.
+- Supra pair index is 75 (HBAR/USDT). Timestamps above 1e11 are treated as milliseconds. That conversion lives in the contract and in `packages/nextjs/lib/feeds.js`. Do not drop it.
+- An HTS token must be associated on the contract (`associate`) before `fundToken`. The precompile is `0x167`. Success is response code 22.
 
 ## Do not
 
 - Add a keeper, a fallback price, or a path that pays without a fresh source.
 - Put an operator key in the repo.
 - Turn this into a registry, a pool, or a second product.
+- Replace the live `eth_call`s with a typed-in price. The page is there to show the feed read failing or clearing.
+
+## Copy
+
+Keep `BandPay.sol`, `packages/schedule/schedule.mjs`, `packages/nextjs/lib/feeds.js`, and `packages/rules/decide.js`. The page is the demo of those files.
 
 ## Commands
 
