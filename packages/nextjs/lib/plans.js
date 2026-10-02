@@ -73,6 +73,17 @@ function assertSchedulable(plan, dueUnix) {
   }
 }
 
+/** Price failures Hedera will hit if it calls release while the feeds still look like this. */
+const REVERT_IF_SCHEDULED = new Set(["disagree", "no-price", "outside-band"]);
+
+function assertWorthScheduling(explained, allowRevert) {
+  if (!explained || !REVERT_IF_SCHEDULED.has(explained.state)) return;
+  if (allowRevert) return;
+  throw new Error(
+    `release would revert right now (${explained.state}: ${explained.detail}). Refusing to sign. Set ALLOW_REVERT=1 to schedule that revert on purpose.`
+  );
+}
+
 async function readPlans(rpcUrl, address) {
   const nextHex = await ethCall(rpcUrl, address, "0x61b8ce8c");
   const count = Number(word(nextHex, 0));
@@ -85,4 +96,4 @@ async function readPlans(rpcUrl, address) {
   return plans;
 }
 
-module.exports = { decodePlan, explain, assertSchedulable, readPlans, amountLabel };
+module.exports = { decodePlan, explain, assertSchedulable, assertWorthScheduling, readPlans, amountLabel };

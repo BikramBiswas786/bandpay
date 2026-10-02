@@ -12,7 +12,7 @@ import {
 
 const require = createRequire(import.meta.url);
 const { readFeeds } = require("../nextjs/lib/feeds.js");
-const { assertSchedulable, explain, readPlans } = require("../nextjs/lib/plans.js");
+const { assertSchedulable, assertWorthScheduling, explain, readPlans } = require("../nextjs/lib/plans.js");
 
 const operatorId = process.env.HEDERA_OPERATOR_ID;
 const operatorKey = process.env.HEDERA_OPERATOR_KEY;
@@ -37,7 +37,9 @@ assertSchedulable(plan, Math.floor(due.getTime() / 1000));
 
 const feeds = await readFeeds(rpc);
 const now = explain(plan, feeds, feeds.readAt);
-console.log(JSON.stringify({ planId: Number(planId), ifReleasedNow: now, due: due.toISOString() }));
+const allowRevert = process.env.ALLOW_REVERT === "1";
+assertWorthScheduling(now, allowRevert);
+console.log(JSON.stringify({ planId: Number(planId), ifReleasedNow: now, due: due.toISOString(), allowRevert }));
 
 const key = PrivateKey.fromStringECDSA(operatorKey);
 const client = Client.forTestnet().setOperator(AccountId.fromString(operatorId), key);

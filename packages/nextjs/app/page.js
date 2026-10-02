@@ -52,7 +52,8 @@ export default function Page() {
       <h1 style={{ fontWeight: 500, fontSize: 40, margin: "0 0 12px" }}>Will this payment clear?</h1>
       <p style={{ marginTop: 0 }}>
         Live Chainlink and Supra, then the escrows already on testnet. Each row is what <code>release</code> would do
-        if Hedera called it now. The schedule script refuses to sign one that would fire before <code>executeAt</code>.
+        if Hedera called it now. The schedule script will not sign a deadline before <code>executeAt</code>, and it will
+        not sign when the live feeds already say <code>release</code> would revert, unless <code>ALLOW_REVERT=1</code>.
       </p>
 
       {error ? <p style={{ color: "#8d2f2f" }}>{error}</p> : null}
@@ -83,13 +84,14 @@ export default function Page() {
         </p>
       ) : null}
 
-      {desk?.schedule ? (
-        <p>
-          Schedule{" "}
-          <a href="https://hashscan.io/testnet/schedule/0.0.10820928">{desk.schedule.id}</a>{" "}
-          {desk.schedule.executed ? "was executed by Hedera." : "has not executed."} Memo: {desk.schedule.memo}.
+      {desk?.schedules?.map(item => (
+        <p key={item.id}>
+          Schedule <a href={`https://hashscan.io/testnet/schedule/${item.id}`}>{item.id}</a>{" "}
+          {item.executed ? "was executed by Hedera." : "has not executed."}{" "}
+          {item.result ? `Result ${item.result}.` : null}{" "}
+          <a href={`https://hashscan.io/testnet/transaction/${item.transactionId}`}>transaction</a>
         </p>
-      ) : null}
+      ))}
 
       {desk?.books?.map(book => (
         <section key={book.id}>
@@ -113,7 +115,7 @@ export default function Page() {
       <h2 style={{ fontWeight: 500 }}>Copy these, delete the page</h2>
       <ul>
         <li><code>BandPay.sol</code> — escrow, band, HTS associate</li>
-        <li><code>schedule.mjs</code> — refuses a schedule that fires too early, then <code>waitForExpiry</code></li>
+        <li><code>schedule.mjs</code> — refuses an early deadline and a revert the feeds already see, then <code>waitForExpiry</code></li>
         <li><code>feeds.js</code> and <code>plans.js</code> — the reads the desk is making</li>
         <li><code>decide.js</code> — the same gate as the contract</li>
       </ul>

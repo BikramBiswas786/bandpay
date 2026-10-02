@@ -1,10 +1,30 @@
 import { readFeeds } from "../../../lib/feeds";
 import { explain, readPlans } from "../../../lib/plans";
-import { MIRROR, loadBooks } from "../../../lib/books";
+import { MIRROR, SCHEDULES, loadBooks } from "../../../lib/books";
 
 export const dynamic = "force-dynamic";
 
 const RPC = "https://testnet.hashio.io/api";
+
+async function readSchedule(item) {
+  const [scheduleResponse, txResponse] = await Promise.all([
+    fetch(`${MIRROR}/api/v1/schedules/${item.id}`, { cache: "no-store" }),
+    fetch(`${MIRROR}/api/v1/transactions/${item.transactionId}`, { cache: "no-store" }),
+  ]);
+  const schedule = await scheduleResponse.json();
+  const tx = await txResponse.json();
+  const records = tx.transactions || [];
+  const executed = records.find(row => row.scheduled) || null;
+  return {
+    id: item.id,
+    memo: schedule.memo ?? "",
+    executed: Boolean(schedule.executed_timestamp),
+    executedAt: schedule.executed_timestamp ?? null,
+    deleted: Boolean(schedule.deleted),
+    result: executed?.result ?? null,
+    transactionId: item.transactionId,
+  };
+}
 
 export async function GET() {
   try {
@@ -17,19 +37,9 @@ export async function GET() {
         plans: plans.map(plan => ({ ...plan, release: explain(plan, feeds, feeds.readAt) })),
       });
     }
-    const scheduleResponse = await fetch(`${MIRROR}/api/v1/schedules/0.0.10820928`, { cache: "no-store" });
-    const schedule = await scheduleResponse.json();
-    return Response.json({
-      feeds,
-      books,
-      schedule: {
-        id: "0.0.10820928",
-        memo: schedule.memo ?? "",
-        executed: Boolean(schedule.executed_timestamp),
-        executedAt: schedule.executed_timestamp ?? null,
-        deleted: Boolean(schedule.deleted),
-      },
-    });
+    const schedules = [];
+    for (const item of SCHEDULES) schedules.push(await readSchedule(item));
+    return Response.json({ feeds, books, schedules });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Desk read failed" }, { status: 502 });
   }

@@ -4,12 +4,23 @@ const PROOF = [
   {
     id: "0.0.10820921",
     address: "0x87aca0b7ad05e10f7ce953827d9a8b3a8231d9b2",
-    note: "HBAR. Schedule 0.0.10820928 paid plan 1. Later plans stay open so this desk can still judge them.",
+    note: "HBAR. Schedule 0.0.10820928 paid plan 1. Schedule 0.0.10830733 called release on plan 3 and reverted. Plan 2 is still open.",
   },
   {
     id: "0.0.10823213",
     address: "0xa0F8f874341C54C89EE9A2178318Cfa504da7705",
     note: "HTS. associate, then fundToken, then cancel.",
+  },
+];
+
+const SCHEDULES = [
+  {
+    id: "0.0.10820928",
+    transactionId: "0.0.10015230-1790921501-362680160",
+  },
+  {
+    id: "0.0.10830733",
+    transactionId: "0.0.10015230-1790970685-448974693",
   },
 ];
 
@@ -34,4 +45,4 @@ async function loadBooks() {
   return [{ id, address: await addressFor(id), note: "BANDPAY_CONTRACT_ID from the shell." }];
 }
 
-module.exports = { PROOF, MIRROR, addressFor, loadBooks };
+module.exports = { PROOF, SCHEDULES, MIRROR, addressFor, loadBooks };

@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { decodePlan, explain, assertSchedulable } = require("./plans");
+const { decodePlan, explain, assertSchedulable, assertWorthScheduling } = require("./plans");
 
 const LIVE = "0x000000000000000000000000620b69e63699edf397146d1306e38fc9f289f981000000000000000000000000620b69e63699edf397146d1306e38fc9f289f9810000000000000000000000000000000000000000000000000000000000a5262e00000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000000000000000000000000000000000006abf7eca000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001";
 
@@ -36,4 +36,12 @@ test("an open plan inside the band would pay, and one outside would not", () => 
   assert.equal(explain(open, feeds, 500).state, "too-early");
   assert.equal(explain(open, feeds, 1_000).state, "would-pay");
   assert.equal(explain({ ...open, minPrice: 1, maxPrice: 2 }, feeds, 1_000).state, "outside-band");
+});
+
+test("refuses to schedule a revert unless ALLOW_REVERT is set", () => {
+  const outside = { state: "outside-band", detail: "Outside the band." };
+  assert.throws(() => assertWorthScheduling(outside, false), /ALLOW_REVERT=1/);
+  assert.doesNotThrow(() => assertWorthScheduling(outside, true));
+  assert.doesNotThrow(() => assertWorthScheduling({ state: "would-pay", detail: "Would pay." }, false));
+  assert.doesNotThrow(() => assertWorthScheduling({ state: "too-early", detail: "Too early." }, false));
 });
