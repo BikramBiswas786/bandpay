@@ -25,6 +25,32 @@ There is no bot. You sign a schedule once. At the expiry time Hedera calls `rele
 
 A registry template stops at the credit. This one starts at the payment: an escrow, a time, and a band. The desk at [bandpay-two.vercel.app](https://bandpay-two.vercel.app) reads the live feeds and the plans already on the contracts, and says what `release` would do if Hedera called it now. Plan 2 is still open and would pay. Plan 3 was scheduled on purpose: Hedera called `release`, the call reverted, and the 0.1 HBAR is still escrowed. `schedule.mjs` will not sign a deadline before `executeAt`, and it will not sign when the live feeds already say the call would revert, unless `ALLOW_REVERT=1`.
 
+## How a payment moves
+
+A developer who needs a registry starts at Guardian. This repo is the payment Guardian does not ship.
+
+1. The payer escrows HBAR with `fundHbar`, or an HTS token with `fundToken`. An HTS token must be associated first. `associate` calls precompile `0x167` and accepts only response code 22.
+2. `schedule.mjs` signs one `ScheduleCreate` with `waitForExpiry`. It reads the plan first. A deadline before `executeAt` is refused. A price the live feeds already reject is refused unless `ALLOW_REVERT=1`.
+3. At expiry, Hedera calls `release` as the payer. There is no keeper.
+4. `release` reads Chainlink. If that round is stale it reads Supra. If both are fresh they must agree within 300 bps, and the price must sit inside the band. Otherwise the call reverts and the escrow stays until `cancel`.
+5. Only the payer can `cancel`. The escrow comes back.
+
+## Environment
+
+The key stays in the shell. Nothing here is committed.
+
+| Name | When | What |
+| --- | --- | --- |
+| `DEPLOYER_PRIVATE_KEY` | deploy, fund | ECDSA hex, `0x` plus 64 characters |
+| `HEDERA_OPERATOR_ID` | schedule | `0.0.x` |
+| `HEDERA_OPERATOR_KEY` | schedule, or fund if the deployer key is unset | same key |
+| `BANDPAY_CONTRACT_ID` | fund, schedule, optional check | `0.0.x` from `deploy.js` |
+| `PLAN_ID` | schedule | printed by `fund.js` |
+| `DUE_IN_SECONDS` | fund, schedule | seconds until `executeAt`, or until the schedule expires |
+| `MIN_USD`, `MAX_USD` | fund, optional | narrow the band. Unset means about 0 to 1000 USD |
+| `ALLOW_REVERT` | schedule, optional | `1` signs a call the feeds already say will revert |
+| `HEDERA_RPC_URL` | optional | defaults to `https://testnet.hashio.io/api` |
+
 ## What breaks if you remove it
 
 | Remove | What is left |

@@ -5,6 +5,17 @@ import { decide } from "../lib/decide";
 
 const hour = 3600;
 
+const LABELS = {
+  paid: "Paid",
+  "would-pay": "Would pay",
+  "outside-band": "Outside band",
+  cancelled: "Returned",
+  "too-early": "Too early",
+  disagree: "Disagree",
+  "no-price": "No price",
+  empty: "Empty",
+};
+
 export default function Page() {
   const [desk, setDesk] = useState(null);
   const [error, setError] = useState("");
@@ -46,129 +57,168 @@ export default function Page() {
     return decide({ chainlink, supra, minPrice: Number(min), maxPrice: Number(max) });
   }, [feeds, min, max]);
 
+  const gap = useMemo(() => {
+    if (!feeds?.chainlink?.fresh || !feeds?.supra?.fresh || feeds.chainlink.price <= 0) return null;
+    return Math.floor(
+      (Math.abs(feeds.chainlink.price - feeds.supra.price) * 10000) / feeds.chainlink.price,
+    );
+  }, [feeds]);
+
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: 24, lineHeight: 1.45 }}>
-      <p
-        style={{
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "#8c4e2a",
-          marginBottom: 8,
-        }}
-      >
-        Bandpay
-      </p>
-      <h1 style={{ fontWeight: 500, fontSize: 40, margin: "0 0 12px" }}>
-        Will this payment clear?
-      </h1>
-      <p style={{ marginTop: 0 }}>
-        Live Chainlink and Supra, then the escrows already on testnet. Each row is what{" "}
-        <code>release</code> would do if Hedera called it now. The schedule script will not sign a
-        deadline before <code>executeAt</code>, and it will not sign when the live feeds already say{" "}
-        <code>release</code> would revert, unless <code>ALLOW_REVERT=1</code>.
+    <main className="wrap">
+      <p className="kicker">Not a registry. A scheduled payment.</p>
+      <h1>Pay only inside the band</h1>
+      <p className="lede">
+        Guardian already issues a credit. This template starts at the payment. You sign one
+        schedule. Hedera calls <code>release</code>. The call pays only when Chainlink and Supra
+        agree within 3% and the price is inside the band. Remove the schedule and someone has to run
+        a bot. Remove either feed and nothing can pay.
       </p>
 
-      {error ? <p style={{ color: "#8d2f2f" }}>{error}</p> : null}
-      {!desk && !error ? <p>Reading testnet…</p> : null}
+      {error ? <p className="stale">{error}</p> : null}
+      {!desk && !error ? <p className="lede">Reading testnet…</p> : null}
 
       {feeds ? (
-        <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <section className="grid-2">
           <Feed name="Chainlink" quote={feeds.chainlink} />
           <Feed name="Supra" quote={feeds.supra} />
         </section>
       ) : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
-        <label>
-          Min USD
-          <input value={min} onChange={(event) => setMin(event.target.value)} style={field} />
-        </label>
-        <label>
-          Max USD
-          <input value={max} onChange={(event) => setMax(event.target.value)} style={field} />
-        </label>
-      </div>
-      {decision ? (
-        <p style={{ padding: 12, background: "#fff", border: "1px solid #d9d0c2" }}>
-          {decision.ok
-            ? `A new plan with this band would pay from ${decision.source} at ${decision.price.toFixed(6)} USD.`
-            : decision.detail}
+      {gap !== null ? (
+        <p className="meta">
+          The two feeds differ by {gap} bps. The contract refuses anything over 300.
         </p>
       ) : null}
 
-      {desk?.schedules?.map((item) => (
-        <p key={item.id}>
-          Schedule <a href={`https://hashscan.io/testnet/schedule/${item.id}`}>{item.id}</a>{" "}
-          {item.executed ? "was executed by Hedera." : "has not executed."}{" "}
-          {item.result ? `Result ${item.result}.` : null}{" "}
-          <a href={`https://hashscan.io/testnet/transaction/${item.transactionId}`}>transaction</a>
-        </p>
-      ))}
+      <section className="section">
+        <h2>Try a band against the live price</h2>
+        <div className="grid-2 band-inputs">
+          <label>
+            Min USD
+            <input
+              value={min}
+              onChange={(event) => setMin(event.target.value)}
+              inputMode="decimal"
+            />
+          </label>
+          <label>
+            Max USD
+            <input
+              value={max}
+              onChange={(event) => setMax(event.target.value)}
+              inputMode="decimal"
+            />
+          </label>
+        </div>
+        {decision ? (
+          <p className={decision.ok ? "verdict ok" : "verdict bad"}>
+            {decision.ok
+              ? `A new escrow in this band would pay from ${decision.source} at ${decision.price.toFixed(6)} USD.`
+              : decision.detail}
+          </p>
+        ) : null}
+      </section>
+
+      {desk?.schedules?.length ? (
+        <section className="section">
+          <h2>Hedera already fired both outcomes</h2>
+          <p>No keeper. The same schedule service paid one escrow and reverted the other.</p>
+          <div className="schedules">
+            {desk.schedules.map((item) => (
+              <article key={item.id} className="tile">
+                <h2>
+                  <a href={`https://hashscan.io/testnet/schedule/${item.id}`}>{item.id}</a>
+                </h2>
+                <p className={item.result === "SUCCESS" ? "fresh" : "stale"}>
+                  {scheduleLine(item)}
+                </p>
+                <p className="meta">
+                  <a href={`https://hashscan.io/testnet/transaction/${item.transactionId}`}>
+                    {item.result || "pending"}
+                  </a>
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {desk?.books?.map((book) => (
-        <section key={book.id}>
-          <h2 style={{ fontWeight: 500 }}>
+        <section key={book.id} className="section">
+          <h2>
             <a href={`https://hashscan.io/testnet/contract/${book.id}`}>{book.id}</a>
           </h2>
-          <p style={{ marginTop: 0 }}>{book.note}</p>
+          <p>{book.note}</p>
           {book.plans.map((plan) => (
-            <article
-              key={plan.id}
-              style={{
-                border: "1px solid #d9d0c2",
-                padding: 12,
-                marginBottom: 8,
-                background: "#fff",
-              }}
-            >
-              <strong>
-                Plan {plan.id}: {plan.amountLabel} → {plan.recipient.slice(0, 8)}…
-              </strong>
-              <p style={{ margin: "6px 0 0" }}>
-                Band {plan.minPrice}–{plan.maxPrice}. {plan.release.detail}
-              </p>
+            <article key={plan.id} className="plan">
+              <strong>Plan {plan.id}</strong>
+              <div>
+                <div>{plan.amountLabel}</div>
+                <p className="meta">
+                  Band {money(plan.minPrice)}–{money(plan.maxPrice)} USD. {plan.release.detail}
+                </p>
+              </div>
+              <span className={pillClass(plan.release.state)}>
+                {LABELS[plan.release.state] || plan.release.state}
+              </span>
             </article>
           ))}
         </section>
       ))}
 
-      <h2 style={{ fontWeight: 500 }}>Copy these, delete the page</h2>
-      <ul>
-        <li>
-          <code>BandPay.sol</code> — escrow, band, HTS associate
-        </li>
-        <li>
-          <code>schedule.mjs</code> — refuses an early deadline and a revert the feeds already see,
-          then <code>waitForExpiry</code>
-        </li>
-        <li>
-          <code>feeds.js</code> and <code>plans.js</code> — the reads the desk is making
-        </li>
-        <li>
-          <code>decide.js</code> — the same gate as the contract
-        </li>
-      </ul>
+      <section className="section">
+        <h2>Copy these, delete the page</h2>
+        <ul className="copy">
+          <li>
+            <code>BandPay.sol</code> — escrow, the band, and the HTS associate call
+          </li>
+          <li>
+            <code>schedule.mjs</code> — one wait-for-expiry schedule. It refuses an early deadline
+            and a revert the feeds already see.
+          </li>
+          <li>
+            <code>feeds.js</code> and <code>plans.js</code> — the two oracle reads and the plan
+            decoder this page uses
+          </li>
+          <li>
+            <code>decide.js</code> — the same gate as the contract, before you sign
+          </li>
+        </ul>
+      </section>
     </main>
   );
 }
 
-const field = {
-  display: "block",
-  width: "100%",
-  marginTop: 4,
-  padding: 8,
-  font: "inherit",
-  boxSizing: "border-box",
-};
+function scheduleLine(item) {
+  if (!item.executed) return "Waiting for Hedera.";
+  if (item.result === "SUCCESS") return "Hedera paid the escrow.";
+  if (item.result === "CONTRACT_REVERT_EXECUTED")
+    return "Hedera called release. The band refused. The escrow stayed.";
+  return item.result || "Executed.";
+}
+
+function money(value) {
+  if (!Number.isFinite(value)) return "–";
+  if (value < 0.000001) return "0";
+  if (value >= 100) return value.toFixed(0);
+  return value.toFixed(2);
+}
+
+function pillClass(state) {
+  if (state === "paid" || state === "would-pay") return "pill ok";
+  if (state === "outside-band" || state === "disagree" || state === "no-price") return "pill bad";
+  return "pill";
+}
 
 function Feed({ name, quote }) {
   if (!quote) return null;
   return (
-    <article style={{ border: "1px solid #d9d0c2", padding: 12, background: "#fff" }}>
-      <h2 style={{ margin: 0, fontWeight: 500 }}>{name}</h2>
-      <p style={{ margin: "8px 0 0", fontSize: 28 }}>{quote.price.toFixed(6)}</p>
-      <p style={{ margin: "4px 0 0", color: quote.fresh ? "#2a5c3a" : "#8d2f2f" }}>
-        {quote.fresh ? `fresh, ${quote.ageSec}s old` : `stale, ${quote.ageSec}s old`}
+    <article className="tile">
+      <h2>{name}</h2>
+      <p className="price">{quote.price.toFixed(6)}</p>
+      <p className={quote.fresh ? "fresh" : "stale"}>
+        {quote.fresh ? `Fresh, ${quote.ageSec}s old` : `Stale, ${quote.ageSec}s old`}
       </p>
     </article>
   );
