@@ -51,11 +51,21 @@ async function main() {
   const band = new ethers.Contract(await contractAddress(id), artifact.abi, wallet);
   const planId = await band.nextId();
   const executeAt = Math.floor(Date.now() / 1000) + due;
-  const tx = await band.fundHbar(wallet.address, minPrice, maxPrice, executeAt, {
+  const amountHbar = process.env.AMOUNT_HBAR || "0.1";
+  if (!/^\d+(\.\d{1,8})?$/.test(amountHbar)) {
+    throw new Error("AMOUNT_HBAR must be an HBAR amount with at most 8 decimals.");
+  }
+  const value = ethers.parseEther(amountHbar);
+  if (value <= 0n) throw new Error("AMOUNT_HBAR must be greater than 0.");
+  const recipient =
+    process.env.RECIPIENT && process.env.RECIPIENT.startsWith("0x")
+      ? process.env.RECIPIENT
+      : wallet.address;
+  const tx = await band.fundHbar(recipient, minPrice, maxPrice, executeAt, {
     type: 0,
     gasPrice,
     gasLimit: 1_000_000n,
-    value: ethers.parseEther("0.1"),
+    value,
   });
   const receipt = await tx.wait();
   console.log(
@@ -64,6 +74,7 @@ async function main() {
       executeAt,
       minPrice: minPrice.toString(),
       maxPrice: maxPrice.toString(),
+      amountHbar,
       fundTx: tx.hash,
       status: receipt.status,
       scheduleAfterSeconds: due + 30,

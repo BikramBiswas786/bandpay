@@ -103,7 +103,7 @@ h1 {
   color: var(--bad);
 }
 
-.band-inputs {
+.gap {
   margin-top: 12px;
 }
 
@@ -207,13 +207,96 @@ input {
   border-top: 1px solid var(--line);
 }
 
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.mark {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.6rem;
+  color: var(--copper-deep);
+}
+
+.quiet {
+  margin: 0;
+  color: var(--mute);
+  font-size: 0.92rem;
+}
+
+.work {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.steps {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.step b {
+  color: var(--copper);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+button.primary {
+  background: var(--copper-deep);
+  color: #f8f3ea;
+  border-color: var(--copper-deep);
+}
+
+.command {
+  margin: 12px 0 0;
+  padding: 14px;
+  overflow-x: auto;
+  border-radius: 12px;
+  background: #221e1a;
+  color: #f4f0e6;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 @media (max-width: 700px) {
   h1 {
     font-size: 2.1rem;
   }
   .grid-2,
   .schedules,
-  .plan {
+  .plan,
+  .work {
     grid-template-columns: 1fr;
   }
   .pill {

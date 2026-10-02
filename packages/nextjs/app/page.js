@@ -19,8 +19,11 @@ const LABELS = {
 export default function Page() {
   const [desk, setDesk] = useState(null);
   const [error, setError] = useState("");
+  const [amount, setAmount] = useState("0.1");
   const [min, setMin] = useState("0.05");
   const [max, setMax] = useState("0.20");
+  const [minutes, setMinutes] = useState("60");
+  const [copied, setCopied] = useState("");
 
   useEffect(() => {
     let stop = false;
@@ -57,73 +60,169 @@ export default function Page() {
     return decide({ chainlink, supra, minPrice: Number(min), maxPrice: Number(max) });
   }, [feeds, min, max]);
 
-  const gap = useMemo(() => {
-    if (!feeds?.chainlink?.fresh || !feeds?.supra?.fresh || feeds.chainlink.price <= 0) return null;
-    return Math.floor(
-      (Math.abs(feeds.chainlink.price - feeds.supra.price) * 10000) / feeds.chainlink.price,
-    );
-  }, [feeds]);
+  const dueSeconds = Math.max(0, Math.round(Number(minutes) || 0) * 60);
+  const command = commandFor({
+    amount,
+    min,
+    max,
+    dueSeconds,
+    allowRevert: decision && !decision.ok,
+  });
+
+  async function copy(text, label) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+    } catch {
+      setCopied("copy-failed");
+    }
+  }
 
   return (
     <main className="wrap">
+      <header className="top">
+        <p className="mark">Bandpay</p>
+        <p className="quiet">Testnet. This page never asks for a key.</p>
+      </header>
+
       <p className="kicker">Not a registry. A scheduled payment.</p>
-      <h1>Pay only inside the band</h1>
+      <h1>Set the payment. See if it clears.</h1>
       <p className="lede">
-        Guardian already issues a credit. This template starts at the payment. You sign one
-        schedule. Hedera calls <code>release</code>. The call pays only when Chainlink and Supra
-        agree within 3% and the price is inside the band. Remove the schedule and someone has to run
-        a bot. Remove either feed and nothing can pay.
+        Same shape as a check you can run before you sign. The band is judged against the live
+        Chainlink and Supra feeds. Hedera fires <code>release</code> later. The key stays in your
+        shell.
       </p>
 
-      {error ? <p className="stale">{error}</p> : null}
-      {!desk && !error ? <p className="lede">Reading testnet…</p> : null}
+      <section className="work">
+        <form
+          className="tile"
+          onSubmit={(event) => {
+            event.preventDefault();
+            copy(command, "command");
+          }}
+        >
+          <h2>1. The payment</h2>
+          <div className="grid-2 gap">
+            <label>
+              Amount, HBAR
+              <input
+                value={amount}
+                inputMode="decimal"
+                onChange={(event) => setAmount(event.target.value)}
+              />
+            </label>
+            <label>
+              Due in minutes
+              <input
+                value={minutes}
+                inputMode="numeric"
+                onChange={(event) => setMinutes(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="grid-2 gap">
+            <label>
+              Min USD
+              <input
+                value={min}
+                inputMode="decimal"
+                onChange={(event) => setMin(event.target.value)}
+              />
+            </label>
+            <label>
+              Max USD
+              <input
+                value={max}
+                inputMode="decimal"
+                onChange={(event) => setMax(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="actions">
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                setMin("0.05");
+                setMax("0.20");
+              }}
+            >
+              Band that pays
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMin("1");
+                setMax("2");
+              }}
+            >
+              Band that refuses
+            </button>
+          </div>
+        </form>
 
-      {feeds ? (
-        <section className="grid-2">
-          <Feed name="Chainlink" quote={feeds.chainlink} />
-          <Feed name="Supra" quote={feeds.supra} />
-        </section>
-      ) : null}
-
-      {gap !== null ? (
-        <p className="meta">
-          The two feeds differ by {gap} bps. The contract refuses anything over 300.
-        </p>
-      ) : null}
+        <article className="tile">
+          <h2>2. What release would do</h2>
+          {!decision ? <p className="quiet">Reading the two feeds…</p> : null}
+          {decision ? (
+            <p className={decision.ok ? "verdict ok" : "verdict bad"}>
+              {dueSeconds > 0
+                ? "If Hedera called release this second, it would be too early and the escrow would stay. "
+                : ""}
+              {decision.ok
+                ? `At the due time, the current price would pay ${amount || "0"} HBAR from ${decision.source} at ${decision.price.toFixed(6)} USD.`
+                : `At the due time, the current price would revert. ${decision.detail} The escrow would stay.`}
+            </p>
+          ) : null}
+          <div className="steps">
+            <div className="step">
+              <b>1</b>
+              <span>Escrow {amount || "0"} HBAR. Only the payer can release or cancel.</span>
+            </div>
+            <div className="step">
+              <b>2</b>
+              <span>
+                Sign one wait-for-expiry schedule. It refuses a deadline before the due time
+                {decision && !decision.ok ? ", and it refuses this band unless ALLOW_REVERT=1" : ""}
+                .
+              </span>
+            </div>
+            <div className="step">
+              <b>3</b>
+              <span>Hedera calls release. There is no bot.</span>
+            </div>
+            <div className="step">
+              <b>4</b>
+              <span>
+                {decision?.ok
+                  ? "The band contains the price, so the recipient is paid."
+                  : "The band refuses the price, so the call reverts and the escrow stays."}
+              </span>
+            </div>
+          </div>
+        </article>
+      </section>
 
       <section className="section">
-        <h2>Try a band against the live price</h2>
-        <div className="grid-2 band-inputs">
-          <label>
-            Min USD
-            <input
-              value={min}
-              onChange={(event) => setMin(event.target.value)}
-              inputMode="decimal"
-            />
-          </label>
-          <label>
-            Max USD
-            <input
-              value={max}
-              onChange={(event) => setMax(event.target.value)}
-              inputMode="decimal"
-            />
-          </label>
+        <h2>3. Run it</h2>
+        <p>The page cannot sign. Copy this. Put the key in the shell only, after you deploy.</p>
+        <pre className="command">{command}</pre>
+        <div className="actions">
+          <button type="button" className="primary" onClick={() => copy(command, "command")}>
+            {copied === "command" ? "Copied" : "Copy the commands"}
+          </button>
         </div>
-        {decision ? (
-          <p className={decision.ok ? "verdict ok" : "verdict bad"}>
-            {decision.ok
-              ? `A new escrow in this band would pay from ${decision.source} at ${decision.price.toFixed(6)} USD.`
-              : decision.detail}
-          </p>
+        {copied === "copy-failed" ? (
+          <p className="stale">Copy failed. Select the block instead.</p>
         ) : null}
       </section>
 
+      {error ? <p className="stale">{error}</p> : null}
+
       {desk?.schedules?.length ? (
         <section className="section">
-          <h2>Hedera already fired both outcomes</h2>
-          <p>No keeper. The same schedule service paid one escrow and reverted the other.</p>
+          <h2>Already fired on testnet</h2>
+          <p>These are not a simulation. Hedera executed both.</p>
           <div className="schedules">
             {desk.schedules.map((item) => (
               <article key={item.id} className="tile">
@@ -166,40 +265,37 @@ export default function Page() {
           ))}
         </section>
       ))}
-
-      <section className="section">
-        <h2>Copy these, delete the page</h2>
-        <ul className="copy">
-          <li>
-            <code>BandPay.sol</code> — escrow, the band, and the HTS associate call
-          </li>
-          <li>
-            <code>schedule.mjs</code> — one wait-for-expiry schedule. It refuses an early deadline
-            and a revert the feeds already see.
-          </li>
-          <li>
-            <code>feeds.js</code> and <code>plans.js</code> — the two oracle reads and the plan
-            decoder this page uses
-          </li>
-          <li>
-            <code>decide.js</code> — the same gate as the contract, before you sign
-          </li>
-        </ul>
-      </section>
     </main>
   );
+}
+
+function commandFor({ amount, min, max, dueSeconds, allowRevert }) {
+  const lines = [
+    `export AMOUNT_HBAR=${amount || "0.1"}`,
+    `export MIN_USD=${min || "0"}`,
+    `export MAX_USD=${max || "0"}`,
+    `export DUE_IN_SECONDS=${dueSeconds}`,
+    "export BANDPAY_CONTRACT_ID=0.0.YOUR_CONTRACT",
+    "node packages/hardhat/scripts/fund.js",
+    "export PLAN_ID=0",
+    `export DUE_IN_SECONDS=${dueSeconds + 30}`,
+  ];
+  if (allowRevert) lines.push("export ALLOW_REVERT=1");
+  lines.push("npm run schedule --workspace=@bandpay/schedule");
+  return lines.join("\n");
 }
 
 function scheduleLine(item) {
   if (!item.executed) return "Waiting for Hedera.";
   if (item.result === "SUCCESS") return "Hedera paid the escrow.";
-  if (item.result === "CONTRACT_REVERT_EXECUTED")
+  if (item.result === "CONTRACT_REVERT_EXECUTED") {
     return "Hedera called release. The band refused. The escrow stayed.";
+  }
   return item.result || "Executed.";
 }
 
 function money(value) {
-  if (!Number.isFinite(value)) return "–";
+  if (!Number.isFinite(value)) return "0";
   if (value < 0.000001) return "0";
   if (value >= 100) return value.toFixed(0);
   return value.toFixed(2);
@@ -209,17 +305,4 @@ function pillClass(state) {
   if (state === "paid" || state === "would-pay") return "pill ok";
   if (state === "outside-band" || state === "disagree" || state === "no-price") return "pill bad";
   return "pill";
-}
-
-function Feed({ name, quote }) {
-  if (!quote) return null;
-  return (
-    <article className="tile">
-      <h2>{name}</h2>
-      <p className="price">{quote.price.toFixed(6)}</p>
-      <p className={quote.fresh ? "fresh" : "stale"}>
-        {quote.fresh ? `Fresh, ${quote.ageSec}s old` : `Stale, ${quote.ageSec}s old`}
-      </p>
-    </article>
-  );
 }
