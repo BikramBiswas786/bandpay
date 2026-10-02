@@ -14,7 +14,7 @@ async function readSchedule(item) {
   const schedule = await scheduleResponse.json();
   const tx = await txResponse.json();
   const records = tx.transactions || [];
-  const executed = records.find(row => row.scheduled) || null;
+  const executed = records.find((row) => row.scheduled) || null;
   return {
     id: item.id,
     memo: schedule.memo ?? "",
@@ -34,13 +34,16 @@ export async function GET() {
       const plans = await readPlans(RPC, book.address);
       books.push({
         ...book,
-        plans: plans.map(plan => ({ ...plan, release: explain(plan, feeds, feeds.readAt) })),
+        plans: plans.map((plan) => ({ ...plan, release: explain(plan, feeds, feeds.readAt) })),
       });
     }
     const schedules = [];
     for (const item of SCHEDULES) schedules.push(await readSchedule(item));
     return Response.json({ feeds, books, schedules });
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "Desk read failed" }, { status: 502 });
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Desk read failed" },
+      { status: 502 },
+    );
   }
 }

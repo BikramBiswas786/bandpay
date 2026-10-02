@@ -13,7 +13,12 @@ test("fresh chainlink inside the band pays", () => {
 });
 
 test("stale chainlink uses supra", () => {
-  const d = decide({ chainlink: live(0.1, hour + 1), supra: live(0.11), minPrice: 0.05, maxPrice: 0.2 });
+  const d = decide({
+    chainlink: live(0.1, hour + 1),
+    supra: live(0.11),
+    minPrice: 0.05,
+    maxPrice: 0.2,
+  });
   assert.equal(d.source, "supra");
 });
 
@@ -23,7 +28,12 @@ test("disagreement above 3% reverts", () => {
 });
 
 test("both stale reverts", () => {
-  const d = decide({ chainlink: live(0.1, hour + 1), supra: live(0.1, hour + 1), minPrice: 0.05, maxPrice: 0.2 });
+  const d = decide({
+    chainlink: live(0.1, hour + 1),
+    supra: live(0.1, hour + 1),
+    minPrice: 0.05,
+    maxPrice: 0.2,
+  });
   assert.equal(d.reason, "no-price");
 });
 

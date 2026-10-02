@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { decodeChainlink, decodeSupra, ethCall } = require("./feeds");
 
 function words(values) {
-  return "0x" + values.map(value => BigInt(value).toString(16).padStart(64, "0")).join("");
+  return "0x" + values.map((value) => BigInt(value).toString(16).padStart(64, "0")).join("");
 }
 
 test("decodes a Chainlink round into an 8-decimal quote", () => {
@@ -36,7 +36,11 @@ test("an eth_call is not reused from the Next.js fetch cache", async () => {
     return { ok: true, json: async () => ({ result: "0x" + "0".repeat(64) }) };
   };
   try {
-    await ethCall("https://example.invalid", "0x0000000000000000000000000000000000000001", "0x61b8ce8c");
+    await ethCall(
+      "https://example.invalid",
+      "0x0000000000000000000000000000000000000001",
+      "0x61b8ce8c",
+    );
   } finally {
     global.fetch = original;
   }

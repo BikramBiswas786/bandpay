@@ -48,12 +48,24 @@ export default function Page() {
 
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: 24, lineHeight: 1.45 }}>
-      <p style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "#8c4e2a", marginBottom: 8 }}>Bandpay</p>
-      <h1 style={{ fontWeight: 500, fontSize: 40, margin: "0 0 12px" }}>Will this payment clear?</h1>
+      <p
+        style={{
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: "#8c4e2a",
+          marginBottom: 8,
+        }}
+      >
+        Bandpay
+      </p>
+      <h1 style={{ fontWeight: 500, fontSize: 40, margin: "0 0 12px" }}>
+        Will this payment clear?
+      </h1>
       <p style={{ marginTop: 0 }}>
-        Live Chainlink and Supra, then the escrows already on testnet. Each row is what <code>release</code> would do
-        if Hedera called it now. The schedule script will not sign a deadline before <code>executeAt</code>, and it will
-        not sign when the live feeds already say <code>release</code> would revert, unless <code>ALLOW_REVERT=1</code>.
+        Live Chainlink and Supra, then the escrows already on testnet. Each row is what{" "}
+        <code>release</code> would do if Hedera called it now. The schedule script will not sign a
+        deadline before <code>executeAt</code>, and it will not sign when the live feeds already say{" "}
+        <code>release</code> would revert, unless <code>ALLOW_REVERT=1</code>.
       </p>
 
       {error ? <p style={{ color: "#8d2f2f" }}>{error}</p> : null}
@@ -69,11 +81,11 @@ export default function Page() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
         <label>
           Min USD
-          <input value={min} onChange={event => setMin(event.target.value)} style={field} />
+          <input value={min} onChange={(event) => setMin(event.target.value)} style={field} />
         </label>
         <label>
           Max USD
-          <input value={max} onChange={event => setMax(event.target.value)} style={field} />
+          <input value={max} onChange={(event) => setMax(event.target.value)} style={field} />
         </label>
       </div>
       {decision ? (
@@ -84,7 +96,7 @@ export default function Page() {
         </p>
       ) : null}
 
-      {desk?.schedules?.map(item => (
+      {desk?.schedules?.map((item) => (
         <p key={item.id}>
           Schedule <a href={`https://hashscan.io/testnet/schedule/${item.id}`}>{item.id}</a>{" "}
           {item.executed ? "was executed by Hedera." : "has not executed."}{" "}
@@ -93,14 +105,22 @@ export default function Page() {
         </p>
       ))}
 
-      {desk?.books?.map(book => (
+      {desk?.books?.map((book) => (
         <section key={book.id}>
           <h2 style={{ fontWeight: 500 }}>
             <a href={`https://hashscan.io/testnet/contract/${book.id}`}>{book.id}</a>
           </h2>
           <p style={{ marginTop: 0 }}>{book.note}</p>
-          {book.plans.map(plan => (
-            <article key={plan.id} style={{ border: "1px solid #d9d0c2", padding: 12, marginBottom: 8, background: "#fff" }}>
+          {book.plans.map((plan) => (
+            <article
+              key={plan.id}
+              style={{
+                border: "1px solid #d9d0c2",
+                padding: 12,
+                marginBottom: 8,
+                background: "#fff",
+              }}
+            >
               <strong>
                 Plan {plan.id}: {plan.amountLabel} → {plan.recipient.slice(0, 8)}…
               </strong>
@@ -114,16 +134,32 @@ export default function Page() {
 
       <h2 style={{ fontWeight: 500 }}>Copy these, delete the page</h2>
       <ul>
-        <li><code>BandPay.sol</code> — escrow, band, HTS associate</li>
-        <li><code>schedule.mjs</code> — refuses an early deadline and a revert the feeds already see, then <code>waitForExpiry</code></li>
-        <li><code>feeds.js</code> and <code>plans.js</code> — the reads the desk is making</li>
-        <li><code>decide.js</code> — the same gate as the contract</li>
+        <li>
+          <code>BandPay.sol</code> — escrow, band, HTS associate
+        </li>
+        <li>
+          <code>schedule.mjs</code> — refuses an early deadline and a revert the feeds already see,
+          then <code>waitForExpiry</code>
+        </li>
+        <li>
+          <code>feeds.js</code> and <code>plans.js</code> — the reads the desk is making
+        </li>
+        <li>
+          <code>decide.js</code> — the same gate as the contract
+        </li>
       </ul>
     </main>
   );
 }
 
-const field = { display: "block", width: "100%", marginTop: 4, padding: 8, font: "inherit", boxSizing: "border-box" };
+const field = {
+  display: "block",
+  width: "100%",
+  marginTop: 4,
+  padding: 8,
+  font: "inherit",
+  boxSizing: "border-box",
+};
 
 function Feed({ name, quote }) {
   if (!quote) return null;

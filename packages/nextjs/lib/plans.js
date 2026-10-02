@@ -51,8 +51,13 @@ function amountLabel(plan) {
 function explain(plan, feeds, now) {
   if (!plan.funded) return { state: "empty", detail: "Nothing is escrowed." };
   if (plan.paid) return { state: "paid", detail: "Already paid." };
-  if (plan.cancelled) return { state: "cancelled", detail: "Cancelled. The escrow went back to the payer." };
-  if (now < plan.executeAt) return { state: "too-early", detail: "Too early. A schedule that fires before this time reverts, and the escrow stays." };
+  if (plan.cancelled)
+    return { state: "cancelled", detail: "Cancelled. The escrow went back to the payer." };
+  if (now < plan.executeAt)
+    return {
+      state: "too-early",
+      detail: "Too early. A schedule that fires before this time reverts, and the escrow stays.",
+    };
   const chainlink = feeds.chainlink?.fresh
     ? { price: feeds.chainlink.price, ageSec: feeds.chainlink.ageSec, staleAfterSec: feeds.maxAge }
     : null;
@@ -61,7 +66,10 @@ function explain(plan, feeds, now) {
     : null;
   const decision = decide({ chainlink, supra, minPrice: plan.minPrice, maxPrice: plan.maxPrice });
   if (!decision.ok) return { state: decision.reason, detail: decision.detail };
-  return { state: "would-pay", detail: `Would pay from ${decision.source} at ${decision.price.toFixed(6)}.` };
+  return {
+    state: "would-pay",
+    detail: `Would pay from ${decision.source} at ${decision.price.toFixed(6)}.`,
+  };
 }
 
 function assertSchedulable(plan, dueUnix) {
@@ -69,7 +77,9 @@ function assertSchedulable(plan, dueUnix) {
     throw new Error("Plan is not an open escrow. Do not schedule it.");
   }
   if (dueUnix < plan.executeAt) {
-    throw new Error("The schedule expires before executeAt. Hedera would call release too early and the payment would revert.");
+    throw new Error(
+      "The schedule expires before executeAt. Hedera would call release too early and the payment would revert.",
+    );
   }
 }
 
@@ -80,7 +90,7 @@ function assertWorthScheduling(explained, allowRevert) {
   if (!explained || !REVERT_IF_SCHEDULED.has(explained.state)) return;
   if (allowRevert) return;
   throw new Error(
-    `release would revert right now (${explained.state}: ${explained.detail}). Refusing to sign. Set ALLOW_REVERT=1 to schedule that revert on purpose.`
+    `release would revert right now (${explained.state}: ${explained.detail}). Refusing to sign. Set ALLOW_REVERT=1 to schedule that revert on purpose.`,
   );
 }
 
@@ -96,4 +106,11 @@ async function readPlans(rpcUrl, address) {
   return plans;
 }
 
-module.exports = { decodePlan, explain, assertSchedulable, assertWorthScheduling, readPlans, amountLabel };
+module.exports = {
+  decodePlan,
+  explain,
+  assertSchedulable,
+  assertWorthScheduling,
+  readPlans,
+  amountLabel,
+};

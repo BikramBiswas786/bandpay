@@ -9,6 +9,9 @@ export async function GET() {
     const feeds = await readFeeds(RPC);
     return Response.json(feeds);
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "Price read failed" }, { status: 502 });
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Price read failed" },
+      { status: 502 },
+    );
   }
 }

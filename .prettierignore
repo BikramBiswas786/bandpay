@@ -1,0 +1,7 @@
+node_modules
+package-lock.json
+packages/hardhat/artifacts
+packages/hardhat/cache
+.git
+*.md
+*.sol

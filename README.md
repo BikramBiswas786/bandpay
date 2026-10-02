@@ -10,6 +10,7 @@ npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
 cd my-pay
 npm install
 npm test
+npm run lint
 npm run check
 npm run dev
 ```
@@ -55,11 +56,14 @@ Node 20.18.3 or newer.
 ```bash
 npm install
 npm test
+npm run lint
 npm run check
 npm run dev
 ```
 
 `npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, and eight contract cases.
+
+`npm run lint` is ESLint on the page, solhint on the contracts, and a Prettier check. `npm run format` rewrites the JavaScript. The scaffolder runs that format command after install.
 
 `npm run check` does use the network. It reads Chainlink, Supra, and the escrows already on testnet, and prints what `release` would do right now. No key. Set `BANDPAY_CONTRACT_ID` when you want your own deployment instead of the proof contracts.
 

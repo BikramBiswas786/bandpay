@@ -27,6 +27,7 @@ Keep `BandPay.sol`, `packages/schedule/schedule.mjs`, `packages/nextjs/lib/feeds
 
 ```bash
 npm test
+npm run lint
 npm run dev
 ```
 

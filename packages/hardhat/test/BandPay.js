@@ -29,9 +29,11 @@ describe("BandPay", function () {
     const { payer, recipient, chainlink, band } = await setup();
     const now = (await ethers.provider.getBlock("latest")).timestamp;
     await chainlink.set(USD(0, 10_000_000), now - 7200);
-    await band.connect(payer).fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now, {
-      value: ethers.parseEther("1"),
-    });
+    await band
+      .connect(payer)
+      .fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now, {
+        value: ethers.parseEther("1"),
+      });
     await expect(band.release(0)).to.changeEtherBalance(recipient, ethers.parseEther("1"));
   });
 
@@ -84,7 +86,14 @@ describe("BandPay", function () {
     const token = await Token.deploy(payer.address, 50n);
     await token.approve(await band.getAddress(), 50n);
     const now = (await ethers.provider.getBlock("latest")).timestamp;
-    await band.fundToken(recipient.address, await token.getAddress(), 50n, USD(0, 5_000_000), USD(0, 20_000_000), now);
+    await band.fundToken(
+      recipient.address,
+      await token.getAddress(),
+      50n,
+      USD(0, 5_000_000),
+      USD(0, 20_000_000),
+      now,
+    );
     await band.release(0);
     expect(await token.balanceOf(recipient.address)).to.equal(50n);
   });
@@ -96,9 +105,15 @@ describe("BandPay", function () {
     const ok = await Ok.deploy();
     const bad = await Bad.deploy();
     const token = ethers.Wallet.createRandom().address;
-    await ethers.provider.send("hardhat_setCode", ["0x0000000000000000000000000000000000000167", await ethers.provider.getCode(await ok.getAddress())]);
+    await ethers.provider.send("hardhat_setCode", [
+      "0x0000000000000000000000000000000000000167",
+      await ethers.provider.getCode(await ok.getAddress()),
+    ]);
     await band.associate(token);
-    await ethers.provider.send("hardhat_setCode", ["0x0000000000000000000000000000000000000167", await ethers.provider.getCode(await bad.getAddress())]);
+    await ethers.provider.send("hardhat_setCode", [
+      "0x0000000000000000000000000000000000000167",
+      await ethers.provider.getCode(await bad.getAddress()),
+    ]);
     await expect(band.associate(token)).to.be.revertedWithCustomError(band, "AssociateFailed");
   });
 });
