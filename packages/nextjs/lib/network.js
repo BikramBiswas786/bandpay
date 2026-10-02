@@ -10,9 +10,9 @@ const NETWORKS = {
     supra: "0x6Cd59830AAD978446e6cc7f6cc173aF7656Fb917",
     supraPair: 75,
     maxAge: 3600,
-    router: "",
-    whbar: "",
-    usdc: "",
+    router: "0x0000000000000000000000000000000000004b40",
+    whbar: "0x0000000000000000000000000000000000003ad2",
+    usdc: "0x0000000000000000000000000000000000001549",
   },
   mainnet: {
     name: "mainnet",

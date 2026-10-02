@@ -7,7 +7,7 @@ One job. A payer escrows HBAR or an HTS facade token. A wait-for-expiry schedule
 - `msg.sender` must be the payer. A stranger cannot release or cancel.
 - Before `executeAt`, release reverts.
 - Chainlink fresh and Supra fresh: they must agree within 300 bps, or the call reverts. Chainlink's price is the one compared to the band.
-- A dollar invoice also calls SaucerSwap `getAmountsOut`. If that pool is more than 300 bps off the oracle, release reverts `PoolOff`. With no router it reverts `NoPool`. An HBAR payment that is not a dollar amount does not ask the pool. The default testnet deploy leaves the router unset. The public testnet pair prices HBAR near $2. Contract `0.0.10832627` is the deploy that points at router `0.0.19264` and shows `PoolOff`. Do not make that the default.
+- A dollar invoice also calls SaucerSwap `getAmountsOut`. If that pool is more than 300 bps off the oracle, release reverts `PoolOff`. With no router it reverts `NoPool`. An HBAR payment that is not a dollar amount does not ask the pool. The testnet default is the public router `0.0.19264`, WHBAR `0.0.15058` and USDC `0.0.5449`. That pool prices HBAR near $2, so a testnet dollar invoice reverts `PoolOff`. Contract `0.0.10832627` is that proof. Do not point a testnet deploy at a self-priced pair.
 - One fresh source is enough. Chainlink first, then Supra.
 - Neither fresh: revert. The escrow stays until `cancel`.
 - Supra pair index is 75 (HBAR/USDT). Timestamps above 1e11 are treated as milliseconds. That conversion lives in the contract and in `packages/nextjs/lib/feeds.js`. Do not drop it.
