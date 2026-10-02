@@ -1,6 +1,7 @@
 import { readFeeds } from "../../../lib/feeds";
 import { explain, readPlans } from "../../../lib/plans";
-import { MIRROR, SCHEDULES, loadBooks } from "../../../lib/books";
+import { MIRROR, SCHEDULES, TOPIC_ID, loadBooks } from "../../../lib/books";
+import { decodeReceiptMessage } from "../../../lib/receipts";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,24 @@ async function readSchedule(item) {
   };
 }
 
+async function readReceipts() {
+  const response = await fetch(`${MIRROR}/api/v1/topics/${TOPIC_ID}/messages?limit=10&order=asc`, {
+    cache: "no-store",
+  });
+  const body = await response.json();
+  const receipts = [];
+  for (const row of body.messages || []) {
+    const decoded = decodeReceiptMessage(row.message);
+    if (!decoded) continue;
+    receipts.push({
+      ...decoded,
+      sequence: row.sequence_number,
+      consensusTimestamp: row.consensus_timestamp,
+    });
+  }
+  return receipts;
+}
+
 export async function GET() {
   try {
     const feeds = await readFeeds(RPC);
@@ -39,7 +58,8 @@ export async function GET() {
     }
     const schedules = [];
     for (const item of SCHEDULES) schedules.push(await readSchedule(item));
-    return Response.json({ feeds, books, schedules });
+    const receipts = await readReceipts();
+    return Response.json({ feeds, books, schedules, topicId: TOPIC_ID, receipts });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Desk read failed" },

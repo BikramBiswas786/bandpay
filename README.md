@@ -56,6 +56,7 @@ The evidence, all signed by the exposed account above:
 | Hedera executed a scheduled `release` and the plan was paid | [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928) |
 | Hedera fired `release`, `OutsideBand` reverted, and the escrow stayed | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) |
 | An HTS token was associated, escrowed, and released by a schedule | [schedule 0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) |
+| Anyone can re-read those three results from HCS, with no key | [topic 0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) |
 
 `fundHbarUsd` is the payroll case. The payer escrows HBAR for a dollar invoice. When the schedule fires, `release` uses the checked price, pays that many HBAR, and refunds the rest. If the dollars no longer fit in the escrow, it reverts `Underfunded`. `fundHbarInstallments` splits one escrow into at most 12 plans. `COUNT` and `EVERY_SECONDS` sign one wait-for-expiry schedule per plan. The plan amounts add up to the escrow, and a thirteenth instalment is refused.
 
@@ -69,7 +70,7 @@ The public testnet WHBAR/USDC pair is not a dollar. It has priced HBAR near $2, 
 
 A schedule cannot expire more than 62 days out. `schedule.mjs` refuses a series whose last instalment is past that. Twelve monthly plans cannot all be signed at once.
 
-There is no HCS precompile, so the contract cannot write the topic itself. After the schedule has a mirror result, `node packages/schedule/receipt.mjs` writes `{template, planId, result, scheduleId}` to `BANDPAY_TOPIC_ID`. That message is capped at 1024 bytes.
+There is no HCS precompile, so the contract cannot write the topic itself. After the schedule has a mirror result, `node packages/schedule/receipt.mjs` writes `{template, planId, result, scheduleId}` to `BANDPAY_TOPIC_ID`. That message is capped at 1024 bytes. The proof topic is [0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517). Message 1 is the HBAR payment, message 2 is the `OutsideBand` revert, and message 3 is the HTS payment.
 
 ## How a payment moves
 
@@ -232,7 +233,7 @@ HBAR does not need this step. Use `fund.js` for that.
 
 These links are the proof that Hedera will fire `release`. Every one of them was signed by `0.0.10015230`. Do not reuse that account. Create a new ECDSA account from the portal. The faucet API needs a personal access token, which this repo does not have.
 
-The contracts below were deployed before `Funded`, `Released`, and `Cancelled` existed. The source emits those events. A new deploy emits them on chain. A scheduled release of an HTS token has not been shown. What is shown for the token is associate, fund, and cancel.
+The contracts below were deployed before `Funded`, `Released`, and `Cancelled` existed. The source emits those events. A new deploy emits them on chain. A scheduled HTS release has been shown: schedule [0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) paid plan 1, 5 BAND. Topic [0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) repeats that result, the HBAR payment, and the `OutsideBand` revert.
 
 Testnet feeds, not secrets:
 
@@ -269,6 +270,7 @@ The current deployment adds `associate`. HTS token [0.0.10823214](https://hashsc
 | `cancel` sent those 5 units back to the payer | [cancel](https://hashscan.io/testnet/transaction/0x47b23d519e5de3b0b8f391dea8115ac4f9df92fbbf1e2c1cddab057ebafebda2) |
 | Plan 1 escrowed 5 BAND inside a wide band | [fund](https://hashscan.io/testnet/transaction/0xfeb0534c8baa281075a65224109dab1871b257e519b1b6b94252b688b3cbadc8) |
 | Hedera called `release`. The call succeeded and the 5 BAND were paid. Plan 1 is paid. | [schedule 0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) · [executed call](https://hashscan.io/testnet/transaction/0.0.10015230-1790976251-653175855) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10831792) |
+| HCS repeats the HBAR payment, the `OutsideBand` revert, and this HTS payment. | [topic 0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) · [create](https://hashscan.io/testnet/transaction/0.0.10015230-1790978491-264583638) · [message 3](https://hashscan.io/testnet/transaction/0.0.10015230-1790978526-853047700) |
 
 To replace the table, deploy with your own ECDSA key, fund one HBAR plan and one token plan, and schedule both. Do not commit the key.
 

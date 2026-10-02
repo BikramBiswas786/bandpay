@@ -1,4 +1,5 @@
 const MIRROR = "https://testnet.mirrornode.hedera.com";
+const TOPIC_ID = "0.0.10832517";
 
 const PROOF = [
   {
@@ -49,4 +50,4 @@ async function loadBooks() {
   return [{ id, address: await addressFor(id), note: "BANDPAY_CONTRACT_ID from the shell." }];
 }
 
-module.exports = { PROOF, SCHEDULES, MIRROR, addressFor, loadBooks };
+module.exports = { PROOF, SCHEDULES, TOPIC_ID, MIRROR, addressFor, loadBooks };

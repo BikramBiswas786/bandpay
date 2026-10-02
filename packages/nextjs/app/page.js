@@ -46,7 +46,7 @@ export default function Page() {
   const [activity, setActivity] = useState([]);
   const [mine, setMine] = useState([]);
   const [reload, setReload] = useState(0);
-  const [view, setView] = useState("lab");
+  const [view, setView] = useState("schedule");
   const [picked, setPicked] = useState("fresh");
 
   useEffect(() => {
@@ -327,7 +327,9 @@ export default function Page() {
         </button>
       </header>
       <p className="status" aria-live="polite">
-        {activity[0] ? `${activity[0].title}. ${activity[0].detail}` : "The lab needs no key."}
+        {activity[0]
+          ? `${activity[0].title}. ${activity[0].detail}`
+          : "No wallet. Hedera already ran the three outcomes."}
       </p>
       <div className="frame">
         <nav className="nav">
@@ -624,10 +626,29 @@ export default function Page() {
                 </article>
                 <article className="card">
                   <h2>HTS</h2>
-                  <p>Associated, funded, cancelled. Not scheduled.</p>
-                  <a href="https://hashscan.io/testnet/contract/0.0.10823213">0.0.10823213</a>
+                  <p>Hedera paid 5 BAND. Plan 1 is paid.</p>
+                  <a href="https://hashscan.io/testnet/schedule/0.0.10831792">0.0.10831792</a>
                 </article>
               </div>
+              {desk?.topicId ? (
+                <p className="meta">
+                  HCS topic{" "}
+                  <a href={`https://hashscan.io/testnet/topic/${desk.topicId}`}>{desk.topicId}</a>{" "}
+                  repeats those three results. The contract cannot write the topic itself.
+                </p>
+              ) : null}
+              {desk?.receipts?.length ? (
+                <ul className="activity">
+                  {desk.receipts.map((item) => (
+                    <li key={item.sequence}>
+                      <strong>Message {item.sequence}</strong>
+                      <span>
+                        {item.result} · plan {item.planId} · {item.scheduleId}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {desk?.schedules?.length ? (
                 <ul className="activity">
                   {desk.schedules.map((item) => (
