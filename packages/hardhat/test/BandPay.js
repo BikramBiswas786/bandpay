@@ -11,8 +11,33 @@ async function setup() {
   const chainlink = await V3.deploy(8, USD(0, 10_000_000));
   const supra = await Supra.deploy(USD(0, 10_100_000));
   const Band = await ethers.getContractFactory("BandPay");
-  const band = await Band.deploy(await chainlink.getAddress(), await supra.getAddress(), 75, HOUR);
+  const band = await Band.deploy(
+    await chainlink.getAddress(),
+    await supra.getAddress(),
+    75,
+    HOUR,
+    ethers.ZeroAddress,
+    ethers.ZeroAddress,
+    ethers.ZeroAddress,
+  );
   return { payer, recipient, stranger, chainlink, supra, band };
+}
+
+async function setupPool(price8) {
+  const base = await setup();
+  const Router = await ethers.getContractFactory("MockRouter");
+  const router = await Router.deploy(price8);
+  const Band = await ethers.getContractFactory("BandPay");
+  const band = await Band.deploy(
+    await base.chainlink.getAddress(),
+    await base.supra.getAddress(),
+    75,
+    HOUR,
+    await router.getAddress(),
+    base.recipient.address,
+    base.payer.address,
+  );
+  return { ...base, band, router };
 }
 
 describe("BandPay", function () {
@@ -147,7 +172,7 @@ describe("BandPay", function () {
   });
 
   it("pays a USD amount of HBAR and refunds the rest of the escrow", async function () {
-    const { recipient, band } = await setup();
+    const { recipient, band } = await setupPool(USD(0, 10_000_000));
     const now = (await ethers.provider.getBlock("latest")).timestamp;
     const before = await ethers.provider.getBalance(recipient.address);
     await band.fundHbarUsd(
@@ -232,5 +257,39 @@ describe("BandPay", function () {
     expect(paidLog.args.paid).to.equal(true);
     expect(paidLog.args.reason).to.equal("0x");
     expect((await band.plans(0)).paid).to.equal(true);
+  });
+
+  it("refuses a dollar invoice when SaucerSwap is more than 3% off the oracle", async function () {
+    const { recipient, band } = await setupPool(USD(0, 20_000_000));
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await band.fundHbarUsd(
+      recipient.address,
+      USD(0, 5_000_000),
+      USD(0, 5_000_000),
+      USD(0, 20_000_000),
+      now,
+      {
+        value: 100_000_000n,
+      },
+    );
+    await expect(band.release(0)).to.be.revertedWithCustomError(band, "PoolOff");
+    expect((await band.plans(0)).paid).to.equal(false);
+    expect(await ethers.provider.getBalance(await band.getAddress())).to.equal(100_000_000n);
+  });
+
+  it("refuses a dollar invoice when no pool is configured", async function () {
+    const { recipient, band } = await setup();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await band.fundHbarUsd(
+      recipient.address,
+      USD(0, 5_000_000),
+      USD(0, 5_000_000),
+      USD(0, 20_000_000),
+      now,
+      {
+        value: 100_000_000n,
+      },
+    );
+    await expect(band.release(0)).to.be.revertedWithCustomError(band, "NoPool");
   });
 });

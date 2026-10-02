@@ -63,6 +63,10 @@ The evidence, all signed by the exposed account above:
 
 `USD_AMOUNT` on `fund.js` escrows `usdAmount / minPrice` HBAR. Inside the band the price cannot be below `minPrice`, so the invoice cannot ask for more HBAR than the escrow. A token plan is still judged on the HBAR price, and a USD invoice rejects a token on purpose.
 
+A dollar invoice also asks SaucerSwap. `release` calls `getAmountsOut` on the V1 router for WHBAR to USDC. USDC is 6 decimals. If that pool is more than 3% off the oracle, the call reverts `PoolOff` and the escrow stays. Delete the router and a dollar invoice cannot pay: it reverts `NoPool`. An ordinary HBAR band does not ask the pool. That is the difference. The DEX is what makes the invoice safe, not a badge.
+
+The public testnet WHBAR/USDC pair is not a dollar. It has priced HBAR near $2, so the default testnet deploy leaves the router unset rather than paying an invoice against that pool. Mainnet is the public pool. Router `0.0.3045981`, WHBAR `0.0.1456986`, USDC `0.0.456858`, pair `0.0.1462797`. Set `HEDERA_NETWORK=mainnet` and the deploy script uses those. Chainlink and Supra on mainnet still have to be set in the shell. This template does not guess them.
+
 A schedule cannot expire more than 62 days out. `schedule.mjs` refuses a series whose last instalment is past that. Twelve monthly plans cannot all be signed at once.
 
 There is no HCS precompile, so the contract cannot write the topic itself. After the schedule has a mirror result, `node packages/schedule/receipt.mjs` writes `{template, planId, result, scheduleId}` to `BANDPAY_TOPIC_ID`. That message is capped at 1024 bytes.
@@ -163,7 +167,7 @@ npm run check
 npm run dev
 ```
 
-`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, the instalment guard, the HCS message guard, and fourteen contract cases. Those cases include `Funded`, `Released`, `Cancelled`, `Attempted`, a USD-sized HBAR payout, and an instalment split.
+`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, the instalment guard, the HCS message guard, the pool quote, and sixteen contract cases. Those cases include `Funded`, `Released`, `Cancelled`, `Attempted`, a USD-sized HBAR payout, and an instalment split.
 
 `npm run lint` is ESLint on the page, solhint on the contracts, and a Prettier check. `npm run format` rewrites the JavaScript. The scaffolder runs that format command after install. The page uses a system font, so `npm run build` does not download a font.
 

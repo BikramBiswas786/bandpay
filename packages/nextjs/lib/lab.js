@@ -120,6 +120,18 @@ function labScenarios(live) {
       command:
         "export COUNT=2\nexport EVERY_SECONDS=2592000\nnpm run schedule --workspace=@bandpay/schedule",
     },
+    {
+      id: "pool",
+      title: "SaucerSwap is off the oracle",
+      kind: "simulation",
+      result:
+        "A pool at twice the oracle is 10000 bps off. The limit is 300. The dollar invoice does not pay. An HBAR band with no dollar amount does not ask the pool.",
+      ok: false,
+      test: "refuses a dollar invoice when SaucerSwap is more than 3% off the oracle",
+      where: "packages/hardhat/contracts/BandPay.sol _requirePool",
+      command:
+        "export USD_AMOUNT=0.05\nexport MIN_USD=0.05\nexport MAX_USD=0.20\n# mainnet router is SaucerSwap V1 0.0.3045981",
+    },
   ];
 }
 

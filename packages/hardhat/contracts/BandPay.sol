@@ -24,6 +24,10 @@ interface IHederaTokenService {
     function associateToken(address account, address token) external returns (int64 responseCode);
 }
 
+interface ISaucerRouter {
+    function getAmountsOut(uint256 amountIn, address[] calldata path) external view returns (uint256[] memory amounts);
+}
+
 interface IERC20 {
     function transfer(address to, uint256 amount) external returns (bool);
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
@@ -40,6 +44,9 @@ contract BandPay {
     ISupraSValueFeed public immutable supraFeed;
     uint256 public immutable supraPairId;
     uint256 public immutable maxAge;
+    address public immutable router;
+    address public immutable whbar;
+    address public immutable usdc;
 
     struct Plan {
         address payer;
@@ -68,6 +75,8 @@ contract BandPay {
     error ZeroAmount();
     error Underfunded(uint256 owed, uint256 escrow);
     error AssociateFailed(int64 code);
+    error NoPool();
+    error PoolOff(uint256 poolPrice, uint256 oraclePrice);
 
     event Funded(
         uint256 indexed id,
@@ -88,12 +97,26 @@ contract BandPay {
     int64 internal constant HTS_SUCCESS = 22;
     address internal constant HTS = address(uint160(0x167));
 
-    constructor(address chainlink_, address supraFeed_, uint256 supraPairId_, uint256 maxAge_) {
+    /// @dev router, whbar and usdc may be zero. A dollar invoice then reverts NoPool.
+    ///      USDC is 6 decimals. The pool price is quote * 1e10 / hbarIn, in the same 8 decimals as the oracles.
+    constructor(
+        address chainlink_,
+        address supraFeed_,
+        uint256 supraPairId_,
+        uint256 maxAge_,
+        address router_,
+        address whbar_,
+        address usdc_
+    ) {
         if (chainlink_ == address(0) || supraFeed_ == address(0) || maxAge_ == 0) revert BadState();
+        if (router_ != address(0) && (whbar_ == address(0) || usdc_ == address(0))) revert BadState();
         chainlink = AggregatorV3Interface(chainlink_);
         supraFeed = ISupraSValueFeed(supraFeed_);
         supraPairId = supraPairId_;
         maxAge = maxAge_;
+        router = router_;
+        whbar = whbar_;
+        usdc = usdc_;
     }
 
     function fundHbar(address recipient, int256 minPrice, int256 maxPrice, uint256 executeAt)
@@ -193,11 +216,26 @@ contract BandPay {
             uint256 owed = (uint256(plan.usdAmount) * 100_000_000) / uint256(price);
             if (owed == 0 || owed > plan.amount) revert Underfunded(owed, plan.amount);
             payout = owed;
+            _requirePool(payout, uint256(price));
         }
         plan.paid = true;
         emit Released(id, price, payout);
         _send(plan.token, plan.recipient, payout);
         if (payout < plan.amount) _send(plan.token, plan.payer, plan.amount - payout);
+    }
+
+    /// @dev SaucerSwap V1 getAmountsOut. A dollar invoice does not pay if this pool is more than 3% off the oracle.
+    function _requirePool(uint256 hbarIn, uint256 oraclePrice) internal view {
+        if (router == address(0) || hbarIn == 0) revert NoPool();
+        address[] memory path = new address[](2);
+        path[0] = whbar;
+        path[1] = usdc;
+        uint256[] memory amounts = ISaucerRouter(router).getAmountsOut(hbarIn, path);
+        uint256 out = amounts[amounts.length - 1];
+        if (out == 0) revert NoPool();
+        uint256 poolPrice = (out * 1e10) / hbarIn;
+        uint256 diff = poolPrice > oraclePrice ? poolPrice - oraclePrice : oraclePrice - poolPrice;
+        if ((diff * 10000) / oraclePrice > DISAGREE_BPS) revert PoolOff(poolPrice, oraclePrice);
     }
 
     /// @notice Permissionless on purpose. Associating a token anyone can name does not move funds.

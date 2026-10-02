@@ -10,6 +10,9 @@ const NETWORKS = {
     supra: "0x6Cd59830AAD978446e6cc7f6cc173aF7656Fb917",
     supraPair: 75,
     maxAge: 3600,
+    router: "",
+    whbar: "",
+    usdc: "",
   },
   mainnet: {
     name: "mainnet",
@@ -20,6 +23,10 @@ const NETWORKS = {
     supra: "",
     supraPair: 0,
     maxAge: 3600,
+    router: "0x00000000000000000000000000000000002e7a5d",
+    whbar: "0x0000000000000000000000000000000000163b5a",
+    usdc: "0x000000000000000000000000000000000006f89a",
+    pair: "0.0.1462797",
   },
 };
 
@@ -41,6 +48,9 @@ function currentNetwork() {
     supra,
     supraPair,
     rpc: process.env.HEDERA_RPC_URL || base.rpc,
+    router: process.env.SAUCER_ROUTER || base.router,
+    whbar: process.env.SAUCER_WHBAR || base.whbar,
+    usdc: process.env.SAUCER_USDC || base.usdc,
   };
 }
 

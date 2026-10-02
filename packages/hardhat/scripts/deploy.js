@@ -16,11 +16,20 @@ async function main() {
   const wallet = new ethers.Wallet(key, provider);
   const gasPrice = BigInt(await provider.send("eth_gasPrice", [])) * 2n;
   const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
-  const deployed = await factory.deploy(net.chainlink, net.supra, net.supraPair, net.maxAge, {
-    type: 0,
-    gasPrice,
-    gasLimit: 5_000_000n,
-  });
+  const deployed = await factory.deploy(
+    net.chainlink,
+    net.supra,
+    net.supraPair,
+    net.maxAge,
+    net.router || ethers.ZeroAddress,
+    net.whbar || ethers.ZeroAddress,
+    net.usdc || ethers.ZeroAddress,
+    {
+      type: 0,
+      gasPrice,
+      gasLimit: 5_000_000n,
+    },
+  );
   await deployed.waitForDeployment();
   const contract = await deployed.getAddress();
   let contractId = null;
