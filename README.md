@@ -14,6 +14,8 @@ There is no bot. You sign a schedule once. At the expiry time Hedera calls `rele
 
 This is not a carbon registry and it does not use Guardian.
 
+The live desk reads the public testnet feeds and applies the same rule as the contract: [bandpay-two.vercel.app](https://bandpay-two.vercel.app).
+
 ## What breaks if you remove it
 
 | Remove | What is left |
