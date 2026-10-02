@@ -118,13 +118,13 @@ npm run check
 npm run dev
 ```
 
-`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, and eight contract cases.
+`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, the instalment guard, and twelve contract cases. Those cases include `Funded`, `Released`, and `Cancelled`, a USD-sized HBAR payout, and an instalment split.
 
-`npm run lint` is ESLint on the page, solhint on the contracts, and a Prettier check. `npm run format` rewrites the JavaScript. The scaffolder runs that format command after install.
+`npm run lint` is ESLint on the page, solhint on the contracts, and a Prettier check. `npm run format` rewrites the JavaScript. The scaffolder runs that format command after install. The page uses a system font, so `npm run build` does not download a font.
 
 `npm run check` does use the network. It reads Chainlink, Supra, and the escrows already on testnet, and prints what `release` would do right now. No key. Set `BANDPAY_CONTRACT_ID` when you want your own deployment instead of the proof contracts.
 
-`npm run dev` is that same check, in the browser, at `http://localhost:3000`. Connect MetaMask or HashPack on Hedera testnet and run the three checks: a release that pays, a release the band reverts, and a release that is too early. Each one is a transaction on `0.0.10820921`. The page does not read the key. An EVM wallet cannot create the schedule, so that command stays below. `AMOUNT_HBAR` on `fund.js` defaults to 0.1.
+`npm run dev` is that same check, in the browser, at `http://localhost:3000`. Connect MetaMask or HashPack on Hedera testnet. **Run pay** sends a release that pays. **Run refuse** and **Run too early** ask the node first and do not broadcast a call that will revert, then a cancel returns the escrow. An EVM wallet cannot create the schedule, so that command stays below. `AMOUNT_HBAR` on `fund.js` defaults to 0.1.
 
 ## One payment, with a key
 
@@ -166,6 +166,10 @@ node packages/hardhat/scripts/fund.js
 
 ## Testnet
 
+These links are the proof that Hedera will fire `release`. Every one of them was signed by `0.0.10015230`. That account's key is public. Do not fund it, do not schedule from it, and do not copy it into a new project. A fresh ECDSA account from the portal replaces this table. The faucet API needs a personal access token, which this repo does not have, so the table has not been re-signed.
+
+The contracts below were deployed before `Funded`, `Released`, and `Cancelled` existed. The source emits those events. A new deploy emits them on chain. A scheduled release of an HTS token has not been shown. What is shown for the token is associate, fund, and cancel.
+
 Testnet feeds, not secrets:
 
 | Feed | Address |
@@ -191,7 +195,7 @@ Two later escrows on that same contract are still open. The desk judges them aga
 | Plan 3 escrows 0.1 HBAR inside a 1–2 USD band. Today's price is about 0.10, so `release` would revert and the escrow would stay. | [fund plan 3](https://hashscan.io/testnet/transaction/0x4baaa1c305fa5c5d01e948fe8544288ac337c746148c34de295b77d766199993) |
 | Hedera fired that plan anyway (`ALLOW_REVERT=1`). The scheduled call reverted `OutsideBand` at 0.09903519 USD. Plan 3 is still escrowed, not paid. | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) · [executed call](https://hashscan.io/testnet/transaction/0.0.10015230-1790970685-448974693) · [revert](https://testnet.mirrornode.hedera.com/api/v1/contracts/results/0xb052df49203e6a594a9cf3ca095de72c77677b7b57efbdd6fd04d76a9bcae950) |
 
-The current deployment adds `associate`. HTS token [0.0.10823214](https://hashscan.io/testnet/token/0.0.10823214) was associated, escrowed, and returned: [0.0.10823213](https://hashscan.io/testnet/contract/0.0.10823213).
+The current deployment adds `associate`. HTS token [0.0.10823214](https://hashscan.io/testnet/token/0.0.10823214) was associated, escrowed, and returned: [0.0.10823213](https://hashscan.io/testnet/contract/0.0.10823213). It was not released by a schedule.
 
 | What happened | Proof |
 | --- | --- |
@@ -199,8 +203,9 @@ The current deployment adds `associate`. HTS token [0.0.10823214](https://hashsc
 | `associate` of `BAND` through precompile `0x167` | [associate](https://hashscan.io/testnet/transaction/0xaa56e37772c35c38dbe25cdd59b69bb3643c4e8d112e999c1ba7d3c241dc251a) |
 | `fundToken` moved 5 units into the contract | [fund](https://hashscan.io/testnet/transaction/0xd22946f8cda8ba2f88e8fdd23403386b184b89cc8bf1c0578e615ed0c3182b8a) |
 | `cancel` sent those 5 units back to the payer | [cancel](https://hashscan.io/testnet/transaction/0x47b23d519e5de3b0b8f391dea8115ac4f9df92fbbf1e2c1cddab057ebafebda2) |
+| A schedule called `release` on a token plan | Not on testnet. `release` already sends the token once the plan is funded. This row is the gap. |
 
-To schedule another one, deploy your own copy with the commands above, using your own key. Do not reuse account `0.0.10015230`. Those proof transactions were signed by it, and that key is not a key anyone else should use. Do not commit a key.
+To replace the table, deploy with your own ECDSA key, fund one HBAR plan and one token plan, and schedule both. Do not commit the key.
 
 The script sets `waitForExpiry`, so the signed schedule waits until the expiration and then Hedera sends it. The admin key can delete that schedule before then.
 
