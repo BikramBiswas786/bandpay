@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "compile": "hardhat compile",
-    "test": "hardhat test"
+    "compile": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat compile",
+    "test": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat test"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",

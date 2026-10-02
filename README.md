@@ -12,6 +12,8 @@ git config --global user.email "you@example.com"
 npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
 ```
 
+The bounty one-liner without a project name creates `my-hedera-dapp` instead of `my-pay`. Use that directory name in the commands below.
+
 That command installs dependencies and selects Hardhat when GitHub returns `template.json`. Do not run `npm install` again. If it asks for Foundry, GitHub did not return the manifest. Run this instead:
 
 ```bash
@@ -37,7 +39,7 @@ npm run dev
 | `npm run check` | Reads live Chainlink and Supra and prints what `release` would do | No |
 | `npm run dev` | The desk at `http://localhost:3000` | No |
 
-The hosted desk is [bandpay-two.vercel.app](https://bandpay-two.vercel.app). Its Developer Lab shows five outcomes. The fresh-feed row is the live testnet price. The other rows are simulations of the same rule. None of them send a transaction.
+The hosted desk is [bandpay-two.vercel.app](https://bandpay-two.vercel.app). It opens on the three outcomes Hedera already ran: an HBAR payment, an `OutsideBand` revert that left the escrow, and a scheduled payment of 5 BAND. No wallet. The Lab tab is the rule. Its fresh-feed row is the live testnet price. The other rows are simulations. None of them send a transaction.
 
 ### With testnet HBAR
 
