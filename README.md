@@ -3,7 +3,10 @@
 Schedule one payment. Hedera fires it. It clears only inside your price band.
 
 ```bash
-npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay --solidity-framework hardhat --package-manager npm
+npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
+```
+
+```bash
 cd my-pay
 npm install
 npm test
@@ -11,7 +14,11 @@ npm run check
 npm run dev
 ```
 
-This template allows only Hardhat. `--solidity-framework hardhat` keeps the scaffolder off Foundry when GitHub does not return `template.json` (an unauthenticated rate limit does that, and the fallback then looks for Foundry and exits).
+That create command is the scaffolder pointed at this repo. It selects Hardhat on its own when GitHub returns `template.json`. If it stops and asks for Foundry, GitHub did not return the manifest, and the fallback looks for Foundry. Run this instead:
+
+```bash
+npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay --solidity-framework hardhat --package-manager npm
+```
 
 There is no bot. You sign a schedule once. At the expiry time Hedera calls `release`. If the price is outside the band, or both oracles are stale, or they disagree by more than 3%, the call reverts and the escrow stays yours. Cancel before that and the escrow comes back.
 
