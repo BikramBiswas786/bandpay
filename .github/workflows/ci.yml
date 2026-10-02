@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20.18.3"
-      - run: npm install
+      - run: npm ci
       - run: npm run lint
   test:
     runs-on: ubuntu-latest
@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20.18.3"
-      - run: npm install
+      - run: npm ci
       - run: npm test
   build:
     runs-on: ubuntu-latest
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20.18.3"
-      - run: npm install
+      - run: npm ci
       - run: npm run build
   check:
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20.18.3"
-      - run: npm install
+      - run: npm ci
       - run: npm run check
   scaffold:
     runs-on: ubuntu-latest

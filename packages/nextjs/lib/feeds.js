@@ -1,4 +1,4 @@
-/** Read the two public testnet feeds. No key. Copy this with decide.js. */
+const { currentNetwork } = require("./network");
 
 const CHAINLINK = "0x59bC155EB6c6C415fE43255aF66EcF0523c92B4a";
 const SUPRA = "0x6Cd59830AAD978446e6cc7f6cc173aF7656Fb917";
@@ -70,9 +70,10 @@ async function ethCall(rpcUrl, to, data) {
 }
 
 async function readFeeds(rpcUrl, now = Math.floor(Date.now() / 1000)) {
+  const net = currentNetwork();
   const [chainlinkRaw, supraRaw] = await Promise.all([
-    ethCall(rpcUrl, CHAINLINK, "0xfeaf968c"),
-    ethCall(rpcUrl, SUPRA, "0x89b94ea2" + encodePair(SUPRA_PAIR)),
+    ethCall(rpcUrl, net.chainlink, "0xfeaf968c"),
+    ethCall(rpcUrl, net.supra, "0x89b94ea2" + encodePair(BigInt(net.supraPair))),
   ]);
   return {
     chainlink: decodeChainlink(chainlinkRaw, now),

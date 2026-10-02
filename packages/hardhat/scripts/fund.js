@@ -11,6 +11,7 @@
  * Hedera stores msg.value as tinybar, so 0.1 HBAR is ethers.parseEther("0.1").
  */
 const { ethers } = require("ethers");
+const { currentNetwork } = require("../../nextjs/lib/network");
 function usd8(raw) {
   if (!/^\d+(\.\d{1,8})?$/.test(raw))
     throw new Error("MIN_USD and MAX_USD must be a USD amount with at most 8 decimals.");
@@ -20,7 +21,8 @@ function usd8(raw) {
 const artifact = require("../artifacts/contracts/BandPay.sol/BandPay.json");
 
 async function contractAddress(id) {
-  const response = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/contracts/${id}`);
+  const net = currentNetwork();
+  const response = await fetch(`${net.mirror}/api/v1/contracts/${id}`);
   if (!response.ok) throw new Error(`Mirror has no contract ${id}.`);
   const body = await response.json();
   const raw = body.evm_address || "";
@@ -39,13 +41,8 @@ async function main() {
   const minPrice = process.env.MIN_USD ? usd8(process.env.MIN_USD) : 1n;
   const maxPrice = process.env.MAX_USD ? usd8(process.env.MAX_USD) : 1000n * 10n ** 8n;
   if (minPrice <= 0n || maxPrice < minPrice) throw new Error("The band is empty.");
-  const provider = new ethers.JsonRpcProvider(
-    process.env.HEDERA_RPC_URL || "https://testnet.hashio.io/api",
-    296,
-    {
-      staticNetwork: true,
-    },
-  );
+  const net = currentNetwork();
+  const provider = new ethers.JsonRpcProvider(net.rpc, net.chainId, { staticNetwork: true });
   const wallet = new ethers.Wallet(key, provider);
   const gasPrice = BigInt(await provider.send("eth_gasPrice", [])) * 2n;
   const band = new ethers.Contract(await contractAddress(id), artifact.abi, wallet);

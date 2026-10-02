@@ -3,12 +3,11 @@
 Schedule one payment. Hedera fires it. It clears only inside your price band.
 
 ```bash
-npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
+npm create scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
 ```
 
 ```bash
 cd my-pay
-npm install
 npm test
 npm run lint
 npm run check
@@ -49,7 +48,39 @@ The key stays in the shell. Nothing here is committed.
 | `DUE_IN_SECONDS` | fund, schedule | seconds until `executeAt`, or until the schedule expires |
 | `MIN_USD`, `MAX_USD` | fund, optional | narrow the band. Unset means about 0 to 1000 USD |
 | `ALLOW_REVERT` | schedule, optional | `1` signs a call the feeds already say will revert |
-| `HEDERA_RPC_URL` | optional | defaults to `https://testnet.hashio.io/api` |
+| `HEDERA_RPC_URL` | optional | defaults to the Hashio URL for `HEDERA_NETWORK` |
+| `HEDERA_NETWORK` | optional | `testnet` (default) or `mainnet` |
+| `COUNT`, `EVERY_SECONDS` | schedule, optional | sign one schedule per instalment. `COUNT` is 1 to 12 |
+| `CHAINLINK_FEED`, `SUPRA_FEED`, `SUPRA_PAIR` | mainnet | required on mainnet. Testnet addresses are already pinned |
+
+## Prerequisites
+
+Node `20.18.3` or newer. An ECDSA testnet account, not an ED25519 key. About 1 HBAR covers a deploy, a few 0.1 HBAR escrows, and the schedule fees. [Faucet](https://portal.hedera.com/faucet). Do not reuse account `0.0.10015230`.
+
+Chainlink's testnet feed is HBAR/USD. Supra pair 75 is HBAR/USDT. They track the same asset closely enough that a 300 bps gap still means one of them is wrong. The contract uses that gap as the disagreement check, not as a FX conversion.
+
+## Architecture
+
+```mermaid
+sequenceDiagram
+  participant Payer
+  participant BandPay
+  participant Schedule as Hedera Schedule
+  participant Feeds as Chainlink and Supra
+  Payer->>BandPay: fundHbar or fundHbarUsd
+  Payer->>Schedule: ScheduleCreate waitForExpiry
+  Schedule->>BandPay: release as the payer
+  BandPay->>Feeds: read both prices
+  alt inside the band
+    BandPay->>Payer: pay the recipient, refund any unused HBAR
+  else outside, stale, or disagree
+    BandPay-->>Schedule: revert, escrow stays
+  end
+```
+
+`fundHbar` pays the whole escrow. `fundHbarUsd` pays a USD amount of HBAR at the price `release` just checked, and sends the rest back to the payer. If that USD amount no longer fits in the escrow, `release` reverts `Underfunded`. `fundHbarInstallments` splits one escrow into up to 12 plans. `COUNT` and `EVERY_SECONDS` sign one schedule for each.
+
+`Funded`, `Released`, and `Cancelled` are emitted. Indexers can follow those logs. The desk still reads `plans(id)`, because that is the current state.
 
 ## What breaks if you remove it
 
@@ -172,6 +203,25 @@ The current deployment adds `associate`. HTS token [0.0.10823214](https://hashsc
 To schedule another one, deploy your own copy with the commands above, using your own key. Do not reuse account `0.0.10015230`. Those proof transactions were signed by it, and that key is not a key anyone else should use. Do not commit a key.
 
 The script sets `waitForExpiry`, so the signed schedule waits until the expiration and then Hedera sends it. The admin key can delete that schedule before then.
+
+## Adapt it
+
+`HEDERA_NETWORK=testnet` is the default. `mainnet` uses Hashio and the mainnet mirror, and it refuses to deploy until you set `CHAINLINK_FEED` and `SUPRA_FEED` yourself. Those addresses are not pinned here, because a wrong feed is worse than no default.
+
+A payroll is `fundHbarUsd` for a dollar amount, or `fundHbarInstallments` plus `COUNT` and `EVERY_SECONDS` for a series. Another Supra pair is `SUPRA_PAIR`. The band unit stays 8-decimal USD.
+
+## Troubleshooting
+
+| What you see | What it means |
+| --- | --- |
+| The scaffolder asks for Foundry | GitHub did not return `template.json`. Run the command again, or add `--solidity-framework hardhat`. |
+| `INSUFFICIENT_PAYER_BALANCE` | The account needs more testnet HBAR. Use the faucet. |
+| `INVALID_SIGNATURE` | The key is ED25519, or it is not the key for `HEDERA_OPERATOR_ID`. Use ECDSA. |
+| `TooEarly` | The schedule expires before `executeAt`. `schedule.mjs` refuses that unless you ignore the guard. |
+| `OutsideBand` | The price is outside the min and max. The escrow stays until `cancel`. |
+| `Disagree` | The two feeds differ by more than 300 bps. |
+| `NoPrice` | Both feeds are stale or missing. |
+| `Underfunded` | A USD payout would take more HBAR than the escrow. Cancel, or fund a larger escrow. |
 
 ## License
 

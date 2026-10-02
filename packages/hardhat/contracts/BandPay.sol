@@ -52,6 +52,7 @@ contract BandPay {
         bool funded;
         bool paid;
         bool cancelled;
+        int256 usdAmount;
     }
 
     uint256 public nextId;
@@ -65,7 +66,22 @@ contract BandPay {
     error OutsideBand(int256 price);
     error TransferFailed();
     error ZeroAmount();
+    error Underfunded(uint256 owed, uint256 escrow);
     error AssociateFailed(int64 code);
+
+    event Funded(
+        uint256 indexed id,
+        address payer,
+        address recipient,
+        address token,
+        uint256 amount,
+        int256 minPrice,
+        int256 maxPrice,
+        uint256 executeAt,
+        int256 usdAmount
+    );
+    event Released(uint256 indexed id, int256 price, uint256 payout);
+    event Cancelled(uint256 indexed id);
 
     /// @dev Hedera response code SUCCESS. Anything else means the token was not associated.
     int64 internal constant HTS_SUCCESS = 22;
@@ -85,7 +101,46 @@ contract BandPay {
         returns (uint256 id)
     {
         if (msg.value == 0) revert ZeroAmount();
-        id = _open(msg.sender, recipient, address(0), msg.value, minPrice, maxPrice, executeAt);
+        id = _open(msg.sender, recipient, address(0), msg.value, minPrice, maxPrice, executeAt, 0);
+    }
+
+    /// @notice Escrow HBAR. At release, pay `usdAmount` (8 decimals) of HBAR at the checked price and refund the rest.
+    ///         The oracle both allows the payment and sets its size. If the price makes the payout larger than the escrow, release reverts.
+    function fundHbarUsd(
+        address recipient,
+        int256 usdAmount,
+        int256 minPrice,
+        int256 maxPrice,
+        uint256 executeAt
+    ) external payable returns (uint256 id) {
+        if (msg.value == 0 || usdAmount <= 0) revert ZeroAmount();
+        id = _open(msg.sender, recipient, address(0), msg.value, minPrice, maxPrice, executeAt, usdAmount);
+    }
+
+    /// @notice Split the escrow into `count` equal plans, due `every` seconds apart. `count` is at most 12.
+    function fundHbarInstallments(
+        address recipient,
+        uint256 count,
+        uint256 every,
+        int256 minPrice,
+        int256 maxPrice,
+        uint256 firstExecuteAt
+    ) external payable returns (uint256 firstId) {
+        if (count == 0 || count > 12 || every == 0 || msg.value == 0 || msg.value % count != 0) revert BadState();
+        uint256 each = msg.value / count;
+        for (uint256 i = 0; i < count; i++) {
+            uint256 id = _open(
+                msg.sender,
+                recipient,
+                address(0),
+                each,
+                minPrice,
+                maxPrice,
+                firstExecuteAt + i * every,
+                0
+            );
+            if (i == 0) firstId = id;
+        }
     }
 
     function fundToken(
@@ -98,7 +153,7 @@ contract BandPay {
     ) external returns (uint256 id) {
         if (amount == 0 || token == address(0)) revert ZeroAmount();
         if (!IERC20(token).transferFrom(msg.sender, address(this), amount)) revert TransferFailed();
-        id = _open(msg.sender, recipient, token, amount, minPrice, maxPrice, executeAt);
+        id = _open(msg.sender, recipient, token, amount, minPrice, maxPrice, executeAt, 0);
     }
 
     /// @dev Call this from a Schedule Service transaction signed by the payer.
@@ -109,12 +164,21 @@ contract BandPay {
         if (block.timestamp < plan.executeAt) revert TooEarly();
         int256 price = _price();
         if (price < plan.minPrice || price > plan.maxPrice) revert OutsideBand(price);
+        uint256 payout = plan.amount;
+        if (plan.usdAmount > 0) {
+            if (plan.token != address(0)) revert BadState();
+            uint256 owed = (uint256(plan.usdAmount) * 100_000_000) / uint256(price);
+            if (owed == 0 || owed > plan.amount) revert Underfunded(owed, plan.amount);
+            payout = owed;
+        }
         plan.paid = true;
-        _send(plan.token, plan.recipient, plan.amount);
+        emit Released(id, price, payout);
+        _send(plan.token, plan.recipient, payout);
+        if (payout < plan.amount) _send(plan.token, plan.payer, plan.amount - payout);
     }
 
-    /// @notice Call once per HTS token, before fundToken. The contract cannot hold the token until this succeeds.
-    ///         Removing it leaves an escrow that reverts on every token, because Hedera will not credit an unassociated account.
+    /// @notice Permissionless on purpose. Associating a token anyone can name does not move funds.
+    ///         The contract still cannot hold that token until this returns code 22.
     function associate(address token) external {
         if (token == address(0)) revert ZeroAmount();
         (bool ok, bytes memory data) = HTS.call(
@@ -130,6 +194,7 @@ contract BandPay {
         if (!plan.funded || plan.paid || plan.cancelled) revert BadState();
         if (msg.sender != plan.payer) revert NotPayer();
         plan.cancelled = true;
+        emit Cancelled(id);
         _send(plan.token, plan.payer, plan.amount);
     }
 
@@ -140,7 +205,8 @@ contract BandPay {
         uint256 amount,
         int256 minPrice,
         int256 maxPrice,
-        uint256 executeAt
+        uint256 executeAt,
+        int256 usdAmount
     ) internal returns (uint256 id) {
         if (recipient == address(0) || minPrice <= 0 || maxPrice < minPrice) revert BadState();
         id = nextId++;
@@ -154,8 +220,10 @@ contract BandPay {
             executeAt: executeAt,
             funded: true,
             paid: false,
-            cancelled: false
+            cancelled: false,
+            usdAmount: usdAmount
         });
+        emit Funded(id, payer, recipient, token, amount, minPrice, maxPrice, executeAt, usdAmount);
     }
 
     function _price() internal view returns (int256) {

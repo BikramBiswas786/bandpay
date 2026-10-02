@@ -116,4 +116,81 @@ describe("BandPay", function () {
     ]);
     await expect(band.associate(token)).to.be.revertedWithCustomError(band, "AssociateFailed");
   });
+
+  it("emits Funded, Released, and Cancelled", async function () {
+    const { payer, recipient, band } = await setup();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await expect(
+      band.fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now, {
+        value: ethers.parseEther("1"),
+      }),
+    )
+      .to.emit(band, "Funded")
+      .withArgs(
+        0,
+        payer.address,
+        recipient.address,
+        ethers.ZeroAddress,
+        ethers.parseEther("1"),
+        USD(0, 5_000_000),
+        USD(0, 20_000_000),
+        now,
+        0,
+      );
+    await expect(band.release(0))
+      .to.emit(band, "Released")
+      .withArgs(0, USD(0, 10_000_000), ethers.parseEther("1"));
+    await band.fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now, {
+      value: ethers.parseEther("1"),
+    });
+    await expect(band.cancel(1)).to.emit(band, "Cancelled").withArgs(1);
+  });
+
+  it("pays a USD amount of HBAR and refunds the rest of the escrow", async function () {
+    const { recipient, band } = await setup();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    const before = await ethers.provider.getBalance(recipient.address);
+    await band.fundHbarUsd(
+      recipient.address,
+      USD(0, 5_000_000),
+      USD(0, 5_000_000),
+      USD(0, 20_000_000),
+      now,
+      {
+        value: 100_000_000n,
+      },
+    );
+    await band.release(0);
+    expect(await ethers.provider.getBalance(recipient.address)).to.equal(before + 50_000_000n);
+    expect(await ethers.provider.getBalance(await band.getAddress())).to.equal(0n);
+  });
+
+  it("reverts a USD payout that no longer fits in the escrow", async function () {
+    const { recipient, band } = await setup();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await band.fundHbarUsd(recipient.address, USD(2), USD(0, 5_000_000), USD(0, 20_000_000), now, {
+      value: 100_000_000n,
+    });
+    await expect(band.release(0)).to.be.revertedWithCustomError(band, "Underfunded");
+  });
+
+  it("splits one escrow into instalments", async function () {
+    const { recipient, band } = await setup();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await band.fundHbarInstallments(
+      recipient.address,
+      2,
+      3600,
+      USD(0, 5_000_000),
+      USD(0, 20_000_000),
+      now,
+      {
+        value: 200_000_000n,
+      },
+    );
+    expect((await band.plans(0)).amount).to.equal(100_000_000n);
+    expect((await band.plans(1)).amount).to.equal(100_000_000n);
+    expect((await band.plans(1)).executeAt).to.equal(BigInt(now) + 3600n);
+    await expect(band.release(1)).to.be.revertedWithCustomError(band, "TooEarly");
+  });
 });
