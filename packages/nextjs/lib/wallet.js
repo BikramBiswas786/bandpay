@@ -145,7 +145,7 @@ async function send(provider, tx) {
   const gasPrice = await legacyFee(provider);
   return provider.request({
     method: "eth_sendTransaction",
-    params: [{ ...tx, gas: "0x0F4240", gasPrice }],
+    params: [{ gas: "0x493e0", ...tx, gasPrice }],
   });
 }
 
@@ -179,9 +179,42 @@ async function fund(provider, { from, amount, minUsd, maxUsd, dueSeconds }) {
   return { planId: planId.toString(), hash };
 }
 
+async function simulate(provider, from, data) {
+  try {
+    await provider.request({
+      method: "eth_call",
+      params: [{ from, to: HBAR_CONTRACT, data }, "latest"],
+    });
+    return { ok: true, reason: "ok" };
+  } catch (error) {
+    return { ok: false, reason: decodeRevert(error) };
+  }
+}
+
+async function openPlans(provider, account) {
+  const next = await nextPlanId(provider);
+  const target = account.toLowerCase();
+  const mine = [];
+  const stop = next < 40n ? next : 40n;
+  for (let id = 0n; id < stop; id += 1n) {
+    const data = await provider.request({
+      method: "eth_call",
+      params: [{ to: HBAR_CONTRACT, data: "0xb1620616" + wordUint(id) }, "latest"],
+    });
+    const hex = String(data).slice(2);
+    if (hex.length < 64 * 10) continue;
+    const payer = "0x" + hex.slice(24, 64);
+    const funded = BigInt("0x" + hex.slice(7 * 64, 8 * 64)) === 1n;
+    const paid = BigInt("0x" + hex.slice(8 * 64, 9 * 64)) === 1n;
+    const cancelled = BigInt("0x" + hex.slice(9 * 64, 10 * 64)) === 1n;
+    if (payer.toLowerCase() === target && funded && !paid && !cancelled) mine.push(id.toString());
+  }
+  return mine;
+}
+
 async function callAction(provider, from, data) {
   try {
-    const hash = await send(provider, { from, to: HBAR_CONTRACT, data });
+    const hash = await send(provider, { from, to: HBAR_CONTRACT, data, gas: "0x27100" });
     const receipt = await waitReceipt(provider, hash);
     return { ok: succeeded(receipt), hash, reason: succeeded(receipt) ? "ok" : "reverted" };
   } catch (error) {
@@ -204,4 +237,6 @@ module.exports = {
   balanceOf,
   fund,
   callAction,
+  simulate,
+  openPlans,
 };

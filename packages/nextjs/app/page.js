@@ -10,8 +10,10 @@ import {
   encodeRelease,
   formatHbar,
   fund,
+  openPlans,
   parseHbar,
   shortAccount,
+  simulate,
 } from "../lib/wallet";
 
 const hour = 3600;
@@ -38,7 +40,8 @@ export default function Page() {
   const [account, setAccount] = useState("");
   const [balance, setBalance] = useState("");
   const [busy, setBusy] = useState("");
-  const [log, setLog] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [mine, setMine] = useState([]);
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
@@ -84,18 +87,18 @@ export default function Page() {
     dueSeconds,
     allowRevert: decision && !decision.ok,
   });
+  const price = feeds?.chainlink?.fresh ? feeds.chainlink.price : feeds?.supra?.price;
+  const gap =
+    feeds?.chainlink?.fresh && feeds?.supra?.fresh && feeds.chainlink.price > 0
+      ? Math.floor(
+          (Math.abs(feeds.chainlink.price - feeds.supra.price) * 10000) / feeds.chainlink.price,
+        )
+      : null;
 
-  async function copy(text, label) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(label);
-    } catch {
-      setCopied("copy-failed");
-    }
-  }
-
-  function push(line) {
-    setLog((prev) => [...prev, `${prev.length + 1}. ${line}`]);
+  function note(title, detail, href) {
+    setActivity((prev) =>
+      [{ title, detail, href, key: `${prev.length}-${title}` }, ...prev].slice(0, 8),
+    );
   }
 
   function injected() {
@@ -104,101 +107,154 @@ export default function Page() {
   }
 
   async function remember(address) {
+    const eth = injected();
     setAccount(address);
-    const wei = await balanceOf(injected(), address);
-    setBalance(formatHbar(wei));
+    if (!eth) return;
+    setBalance(formatHbar(await balanceOf(eth, address)));
+    setMine(await openPlans(eth, address));
+  }
+
+  async function ensure() {
+    const eth = injected();
+    if (!eth) {
+      throw new Error(
+        "No wallet in this browser. Install MetaMask or HashPack and open the desk there.",
+      );
+    }
+    const address = account || (await connect(eth));
+    await remember(address);
+    const wei = await balanceOf(eth, address);
+    if (wei < parseHbar("0.15")) {
+      throw new Error(`Balance is ${formatHbar(wei)} HBAR. Use the faucet, then try again.`);
+    }
+    return { eth, address };
+  }
+
+  async function onPay() {
+    const { eth, address } = await ensure();
+    note("Pay", "Escrowing 0.1 HBAR inside $0.05–$0.20.");
+    const paid = await fund(eth, {
+      from: address,
+      amount: "0.1",
+      minUsd: "0.05",
+      maxUsd: "0.20",
+      dueSeconds: 0,
+    });
+    note("Funded", `Plan ${paid.planId} is in escrow.`, hashscan(paid.hash));
+    const released = await callAction(eth, address, encodeRelease(paid.planId));
+    if (!released.ok) {
+      await callAction(eth, address, encodeCancel(paid.planId));
+      throw new Error(`Release did not pay (${released.reason}). The escrow was returned.`);
+    }
+    note(
+      "Paid",
+      `Plan ${paid.planId} paid you. Hedera charged a small fee on top.`,
+      hashscan(released.hash),
+    );
+    setReload((value) => value + 1);
+    await remember(address);
+  }
+
+  async function onRefuse() {
+    const { eth, address } = await ensure();
+    note("Refuse", "Escrowing 0.1 HBAR inside $1–$2.");
+    const refused = await fund(eth, {
+      from: address,
+      amount: "0.1",
+      minUsd: "1",
+      maxUsd: "2",
+      dueSeconds: 0,
+    });
+    const sim = await simulate(eth, address, encodeRelease(refused.planId));
+    if (sim.ok || sim.reason === "rejected") {
+      await callAction(eth, address, encodeCancel(refused.planId));
+      throw new Error(
+        "The band would have paid. Escrow returned. Nothing was submitted as a failure.",
+      );
+    }
+    const cancelled = await callAction(eth, address, encodeCancel(refused.planId));
+    if (!cancelled.ok)
+      throw new Error(`The node refused release (${sim.reason}) but the return failed.`);
+    note(
+      "Refused",
+      `Release would revert with ${sim.reason}. That call was not sent, so the wallet stays green. Escrow returned.`,
+      hashscan(cancelled.hash),
+    );
+    setReload((value) => value + 1);
+    await remember(address);
+  }
+
+  async function onEarly() {
+    const { eth, address } = await ensure();
+    note("Too early", "Escrowing 0.1 HBAR that is not due for an hour.");
+    const early = await fund(eth, {
+      from: address,
+      amount: "0.1",
+      minUsd: "0.05",
+      maxUsd: "0.20",
+      dueSeconds: 3600,
+    });
+    const sim = await simulate(eth, address, encodeRelease(early.planId));
+    if (sim.ok) {
+      throw new Error(`Plan ${early.planId} is already due. Leave it, or return it below.`);
+    }
+    const cancelled = await callAction(eth, address, encodeCancel(early.planId));
+    if (!cancelled.ok) throw new Error(`Release is blocked (${sim.reason}) but the return failed.`);
+    note(
+      "Too early",
+      `Release would revert with ${sim.reason}. The failing call was not sent. Escrow returned.`,
+      hashscan(cancelled.hash),
+    );
+    setReload((value) => value + 1);
+    await remember(address);
+  }
+
+  async function onReturn() {
+    const eth = injected();
+    if (!eth || !account) throw new Error("Connect the wallet first.");
+    const ids = await openPlans(eth, account);
+    if (!ids.length) {
+      note("Clear", "No open escrow on this contract for this wallet.");
+      setMine([]);
+      return;
+    }
+    for (const id of ids) {
+      const result = await callAction(eth, account, encodeCancel(id));
+      if (!result.ok) throw new Error(`Plan ${id} did not return (${result.reason}).`);
+      note("Returned", `Plan ${id} sent the escrow back.`, hashscan(result.hash));
+    }
+    setReload((value) => value + 1);
+    await remember(account);
+  }
+
+  async function onFund() {
+    const { eth, address } = await ensure();
+    const result = await fund(eth, {
+      from: address,
+      amount,
+      minUsd: min,
+      maxUsd: max,
+      dueSeconds,
+    });
+    note(
+      "Funded",
+      `Plan ${result.planId} uses the band you set. It does not release.`,
+      hashscan(result.hash),
+    );
+    setReload((value) => value + 1);
+    await remember(address);
   }
 
   async function onConnect() {
     const eth = injected();
     if (!eth) {
       throw new Error(
-        "No wallet in this browser. Install MetaMask or HashPack and open the page there.",
+        "No wallet in this browser. Install MetaMask or HashPack and open the desk there.",
       );
     }
     const address = await connect(eth);
     await remember(address);
-    push(`Connected ${shortAccount(address)} on Hedera testnet.`);
-  }
-
-  async function onFund() {
-    const result = await fund(injected(), {
-      from: account,
-      amount,
-      minUsd: min,
-      maxUsd: max,
-      dueSeconds,
-    });
-    push(`Funded plan ${result.planId}. ${result.hash}`);
-    setReload((value) => value + 1);
-    await remember(account);
-  }
-
-  async function onChecks() {
-    const eth = injected();
-    const wei = await balanceOf(eth, account);
-    if (wei < parseHbar("0.15")) {
-      throw new Error(
-        `Balance is ${formatHbar(wei)} HBAR. Each check escrows 0.1 and returns it. Use the faucet if this is short.`,
-      );
-    }
-    push("Pay check: fund 0.1 HBAR inside 0.05-0.20, due now.");
-    const paid = await fund(eth, {
-      from: account,
-      amount: "0.1",
-      minUsd: "0.05",
-      maxUsd: "0.20",
-      dueSeconds: 0,
-    });
-    push(`Plan ${paid.planId} funded. Releasing.`);
-    const released = await callAction(eth, account, encodeRelease(paid.planId));
-    if (released.reason === "rejected") throw new Error("You rejected the signature. Stopped.");
-    if (!released.ok) {
-      await callAction(eth, account, encodeCancel(paid.planId));
-      throw new Error(`Pay check did not pay (${released.reason}). The escrow was cancelled.`);
-    }
-    push("Pay check passed.");
-
-    push("Refuse check: fund 0.1 HBAR inside 1-2.");
-    const refused = await fund(eth, {
-      from: account,
-      amount: "0.1",
-      minUsd: "1",
-      maxUsd: "2",
-      dueSeconds: 0,
-    });
-    const refuseRelease = await callAction(eth, account, encodeRelease(refused.planId));
-    if (refuseRelease.reason === "rejected") {
-      throw new Error("You rejected the signature. That plan is still escrowed.");
-    }
-    if (refuseRelease.ok) throw new Error("Refuse check paid. The band should have reverted.");
-    const refuseCancel = await callAction(eth, account, encodeCancel(refused.planId));
-    if (!refuseCancel.ok) {
-      throw new Error(`Release reverted (${refuseRelease.reason}) but cancel failed.`);
-    }
-    push(`Refuse check passed. Release returned ${refuseRelease.reason}. Escrow cancelled.`);
-
-    push("Too-early check: due in one hour.");
-    const early = await fund(eth, {
-      from: account,
-      amount: "0.1",
-      minUsd: "0.05",
-      maxUsd: "0.20",
-      dueSeconds: 3600,
-    });
-    const earlyRelease = await callAction(eth, account, encodeRelease(early.planId));
-    if (earlyRelease.reason === "rejected") {
-      throw new Error("You rejected the signature. That plan is still escrowed.");
-    }
-    if (earlyRelease.ok) throw new Error("Too-early check paid. It should have reverted.");
-    const earlyCancel = await callAction(eth, account, encodeCancel(early.planId));
-    if (!earlyCancel.ok) {
-      throw new Error(`Release reverted (${earlyRelease.reason}) but cancel failed.`);
-    }
-    push(`Too-early check passed. Release returned ${earlyRelease.reason}. Escrow cancelled.`);
-    push("Done. Three checks ran from the wallet.");
-    setReload((value) => value + 1);
-    await remember(account);
+    note("Connected", `${shortAccount(address)} on Hedera testnet.`);
   }
 
   async function run(label, task) {
@@ -206,215 +262,226 @@ export default function Page() {
     try {
       await task();
     } catch (err) {
-      push(err instanceof Error ? err.message : "The wallet call failed.");
+      note("Stopped", err instanceof Error ? err.message : "The wallet call failed.");
     } finally {
       setBusy("");
     }
   }
 
+  async function copy(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied("command");
+    } catch {
+      setCopied("copy-failed");
+    }
+  }
+
   return (
     <main className="wrap">
-      <header className="top">
-        <p className="mark">Bandpay</p>
-        <p className="quiet">
-          {account
-            ? `${shortAccount(account)} · ${balance || "…"} HBAR`
-            : "MetaMask or HashPack. The page never sees the key."}
-        </p>
+      <header className="bar">
+        <div>
+          <span className="mark">Bandpay</span>
+          <span className="net">Hedera testnet</span>
+        </div>
+        <button
+          type="button"
+          className="primary"
+          disabled={Boolean(busy)}
+          onClick={() => run("connect", onConnect)}
+        >
+          {account ? `${shortAccount(account)} · ${balance || "…"} HBAR` : "Connect wallet"}
+        </button>
       </header>
 
-      <p className="kicker">Not a registry. A scheduled payment.</p>
-      <h1>Set the payment. See if it clears.</h1>
-      <p className="lede">
-        Same shape as a check you can run before you sign. The band is judged against the live
-        Chainlink and Supra feeds. Hedera fires <code>release</code> later. The key stays in your
-        shell.
-      </p>
-
-      <section className="work">
-        <form
-          className="tile"
-          onSubmit={(event) => {
-            event.preventDefault();
-            copy(command, "command");
-          }}
-        >
-          <h2>1. The payment</h2>
-          <div className="grid-2 gap">
-            <label>
-              Amount, HBAR
-              <input
-                value={amount}
-                inputMode="decimal"
-                onChange={(event) => setAmount(event.target.value)}
-              />
-            </label>
-            <label>
-              Due in minutes
-              <input
-                value={minutes}
-                inputMode="numeric"
-                onChange={(event) => setMinutes(event.target.value)}
-              />
-            </label>
-          </div>
-          <div className="grid-2 gap">
-            <label>
-              Min USD
-              <input
-                value={min}
-                inputMode="decimal"
-                onChange={(event) => setMin(event.target.value)}
-              />
-            </label>
-            <label>
-              Max USD
-              <input
-                value={max}
-                inputMode="decimal"
-                onChange={(event) => setMax(event.target.value)}
-              />
-            </label>
-          </div>
-          <div className="actions">
-            <button
-              type="button"
-              className="primary"
-              onClick={() => {
-                setMin("0.05");
-                setMax("0.20");
-              }}
-            >
-              Band that pays
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMin("1");
-                setMax("2");
-              }}
-            >
-              Band that refuses
-            </button>
-          </div>
-        </form>
-
-        <article className="tile">
-          <h2>2. What release would do</h2>
-          {!decision ? <p className="quiet">Reading the two feeds…</p> : null}
-          {decision ? (
-            <p className={decision.ok ? "verdict ok" : "verdict bad"}>
-              {dueSeconds > 0
-                ? "If Hedera called release this second, it would be too early and the escrow would stay. "
-                : ""}
-              {decision.ok
-                ? `At the due time, the current price would pay ${amount || "0"} HBAR from ${decision.source} at ${decision.price.toFixed(6)} USD.`
-                : `At the due time, the current price would revert. ${decision.detail} The escrow would stay.`}
-            </p>
-          ) : null}
-          <div className="steps">
-            <div className="step">
-              <b>1</b>
-              <span>Escrow {amount || "0"} HBAR. Only the payer can release or cancel.</span>
-            </div>
-            <div className="step">
-              <b>2</b>
-              <span>
-                Sign one wait-for-expiry schedule. It refuses a deadline before the due time
-                {decision && !decision.ok ? ", and it refuses this band unless ALLOW_REVERT=1" : ""}
-                .
-              </span>
-            </div>
-            <div className="step">
-              <b>3</b>
-              <span>Hedera calls release. There is no bot.</span>
-            </div>
-            <div className="step">
-              <b>4</b>
-              <span>
-                {decision?.ok
-                  ? "The band contains the price, so the recipient is paid."
-                  : "The band refuses the price, so the call reverts and the escrow stays."}
-              </span>
-            </div>
-          </div>
+      <section className="hero">
+        <div>
+          <p className="kicker">Not a registry. A scheduled payment.</p>
+          <h1>Pay only inside the band.</h1>
+          <p className="lede">
+            Connect a wallet and run one check at a time. A check that should revert is asked of the
+            node first. The failing call is not sent, so MetaMask does not paint it red.
+          </p>
+        </div>
+        <article className="price-card">
+          <span>HBAR / USD</span>
+          <strong>{price ? price.toFixed(4) : "…"}</strong>
+          <span>
+            {gap === null ? "Waiting for both feeds." : `Chainlink and Supra differ by ${gap} bps.`}
+          </span>
         </article>
       </section>
 
-      <section className="section">
-        <h2>3. Sign the checks</h2>
-        <p>
-          Connect on Hedera testnet. The three checks fund 0.1 HBAR on{" "}
-          <a href="https://hashscan.io/testnet/contract/0.0.10820921">0.0.10820921</a>, call{" "}
-          <code>release</code>, and cancel anything that does not pay you back. You need a little
-          testnet HBAR from the <a href="https://portal.hedera.com/faucet">faucet</a>. An EVM wallet
-          cannot sign a schedule, so that path stays in the shell.
-        </p>
-        <div className="actions">
-          {!account ? (
-            <button
-              type="button"
-              className="primary"
-              disabled={Boolean(busy)}
-              onClick={() => run("connect", onConnect)}
-            >
-              {busy === "connect" ? "Waiting for the wallet…" : "Connect wallet"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="primary"
-              disabled={Boolean(busy)}
-              onClick={() => run("checks", () => onChecks())}
-            >
-              {busy === "checks" ? "Waiting for signatures…" : "Run the three checks"}
-            </button>
-          )}
+      {mine.length ? (
+        <section className="banner">
+          <p>
+            This wallet still has escrow in plan {mine.join(", ")}. The earlier refuse check left
+            one of these open if the run stopped on a red signature.
+          </p>
+          <button type="button" disabled={Boolean(busy)} onClick={() => run("return", onReturn)}>
+            {busy === "return" ? "Returning…" : "Return my escrow"}
+          </button>
+        </section>
+      ) : null}
+
+      <section className="cards">
+        <article className="card">
+          <h2>Pay</h2>
+          <p>
+            Escrow 0.1 HBAR between $0.05 and $0.20, then release it to this wallet. Both
+            transactions succeed.
+          </p>
           <button
             type="button"
-            disabled={!account || Boolean(busy)}
-            onClick={() => run("fund", () => onFund())}
+            className="primary"
+            disabled={Boolean(busy)}
+            onClick={() => run("pay", onPay)}
           >
-            Fund this payment
+            {busy === "pay" ? "Waiting for signatures…" : "Run pay"}
           </button>
-        </div>
-        {account ? (
-          <p className="meta">
-            Fund this payment uses the amount and band above. It does not call release.
+        </article>
+        <article className="card">
+          <h2>Refuse</h2>
+          <p>
+            Escrow between $1 and $2. The node must return OutsideBand. You get the HBAR back. No
+            failed transaction.
           </p>
-        ) : null}
-        {log.length ? (
-          <ul className="log">
-            {log.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        ) : null}
+          <button type="button" disabled={Boolean(busy)} onClick={() => run("refuse", onRefuse)}>
+            {busy === "refuse" ? "Waiting for signatures…" : "Run refuse"}
+          </button>
+        </article>
+        <article className="card">
+          <h2>Too early</h2>
+          <p>
+            Due in one hour. Release is blocked, then the escrow comes back. The blocked call is not
+            broadcast.
+          </p>
+          <button type="button" disabled={Boolean(busy)} onClick={() => run("early", onEarly)}>
+            {busy === "early" ? "Waiting for signatures…" : "Run too early"}
+          </button>
+        </article>
       </section>
 
+      {activity.length ? (
+        <section className="section">
+          <h2>This session</h2>
+          <ul className="activity">
+            {activity.map((item) => (
+              <li key={item.key}>
+                <strong>{item.title}</strong>
+                <span>
+                  {item.detail}{" "}
+                  {item.href ? (
+                    <a href={item.href} target="_blank" rel="noreferrer">
+                      Hashscan
+                    </a>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {error ? <p className="stale">{error}</p> : null}
+
       <section className="section">
-        <h2>4. Or sign from the shell</h2>
+        <h2>Your own band</h2>
         <p>
-          The schedule is a Hedera transaction, not an EVM one. Copy this when you want Hedera to
-          fire <code>release</code> with no bot.
+          This only escrows. It does not release. The wallet max fee can look larger than the HBAR
+          Hedera actually charges.
         </p>
-        <pre className="command">{command}</pre>
+        <div className="grid-2 gap">
+          <label>
+            Amount, HBAR
+            <input
+              value={amount}
+              inputMode="decimal"
+              onChange={(event) => setAmount(event.target.value)}
+            />
+          </label>
+          <label>
+            Due in minutes
+            <input
+              value={minutes}
+              inputMode="numeric"
+              onChange={(event) => setMinutes(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className="grid-2 gap">
+          <label>
+            Min USD
+            <input
+              value={min}
+              inputMode="decimal"
+              onChange={(event) => setMin(event.target.value)}
+            />
+          </label>
+          <label>
+            Max USD
+            <input
+              value={max}
+              inputMode="decimal"
+              onChange={(event) => setMax(event.target.value)}
+            />
+          </label>
+        </div>
+        {decision ? (
+          <p className={decision.ok ? "verdict ok" : "verdict bad"}>
+            {decision.ok
+              ? `At the due time, the current price would pay from ${decision.source} at ${decision.price.toFixed(4)} USD.`
+              : `At the due time, release would revert. ${decision.detail}`}
+          </p>
+        ) : null}
         <div className="actions">
-          <button type="button" className="primary" onClick={() => copy(command, "command")}>
-            {copied === "command" ? "Copied" : "Copy the commands"}
+          <button
+            type="button"
+            className="primary"
+            disabled={Boolean(busy)}
+            onClick={() => run("fund", onFund)}
+          >
+            {busy === "fund" ? "Waiting for the wallet…" : "Fund this band"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMin("0.05");
+              setMax("0.20");
+            }}
+          >
+            Band that pays
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMin("1");
+              setMax("2");
+            }}
+          >
+            Band that refuses
           </button>
         </div>
+      </section>
+
+      <details className="section">
+        <summary>Schedule it from the shell instead</summary>
+        <p>
+          An EVM wallet cannot sign a Hedera schedule. That is the path where Hedera fires release
+          with no bot. Do not reuse account 0.0.10015230.
+        </p>
+        <pre className="command">{command}</pre>
+        <button type="button" onClick={() => copy(command)}>
+          {copied === "command" ? "Copied" : "Copy the commands"}
+        </button>
         {copied === "copy-failed" ? (
           <p className="stale">Copy failed. Select the block instead.</p>
         ) : null}
-      </section>
-
-      {error ? <p className="stale">{error}</p> : null}
+      </details>
 
       {desk?.schedules?.length ? (
         <section className="section">
           <h2>Already fired on testnet</h2>
-          <p>These are not a simulation. Hedera executed both.</p>
           <div className="schedules">
             {desk.schedules.map((item) => (
               <article key={item.id} className="tile">
@@ -423,11 +490,6 @@ export default function Page() {
                 </h2>
                 <p className={item.result === "SUCCESS" ? "fresh" : "stale"}>
                   {scheduleLine(item)}
-                </p>
-                <p className="meta">
-                  <a href={`https://hashscan.io/testnet/transaction/${item.transactionId}`}>
-                    {item.result || "pending"}
-                  </a>
                 </p>
               </article>
             ))}
@@ -440,7 +502,6 @@ export default function Page() {
           <h2>
             <a href={`https://hashscan.io/testnet/contract/${book.id}`}>{book.id}</a>
           </h2>
-          <p>{book.note}</p>
           {book.plans.map((plan) => (
             <article key={plan.id} className="plan">
               <strong>Plan {plan.id}</strong>
@@ -459,6 +520,10 @@ export default function Page() {
       ))}
     </main>
   );
+}
+
+function hashscan(hash) {
+  return hash ? `https://hashscan.io/testnet/transaction/${hash}` : "";
 }
 
 function commandFor({ amount, min, max, dueSeconds, allowRevert }) {
