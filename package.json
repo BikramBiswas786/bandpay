@@ -10,6 +10,7 @@
     "test": "node --test packages/rules/decide.test.js packages/nextjs/lib/feeds.test.js packages/nextjs/lib/plans.test.js && npm test --workspace=@bandpay/hardhat",
     "check": "node packages/nextjs/lib/check.js",
     "lint": "npm test",
+    "format": "node --check packages/nextjs/lib/check.js && node --check packages/nextjs/lib/feeds.js && node --check packages/nextjs/lib/plans.js && node --check packages/nextjs/lib/books.js && node --check packages/nextjs/lib/decide.js && node --check packages/rules/decide.js && node --check packages/schedule/schedule.mjs && node --check packages/hardhat/scripts/deploy.js && node --check packages/hardhat/scripts/fund.js",
     "build": "npm run build --workspace=@bandpay/nextjs",
     "dev": "npm run dev --workspace=@bandpay/nextjs"
   },

@@ -3,17 +3,19 @@
 Schedule one payment. Hedera fires it. It clears only inside your price band.
 
 ```bash
-npm create scaffold-hbar@latest -- --template BikramBiswas786/bandpay
-cd bandpay
+npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay --solidity-framework hardhat --package-manager npm
+cd my-pay
 npm install
 npm test
 npm run check
 npm run dev
 ```
 
+This template allows only Hardhat. `--solidity-framework hardhat` keeps the scaffolder off Foundry when GitHub does not return `template.json` (an unauthenticated rate limit does that, and the fallback then looks for Foundry and exits).
+
 There is no bot. You sign a schedule once. At the expiry time Hedera calls `release`. If the price is outside the band, or both oracles are stale, or they disagree by more than 3%, the call reverts and the escrow stays yours. Cancel before that and the escrow comes back.
 
-A registry template stops at the credit. This one starts at the payment: an escrow, a time, and a band. The desk at [bandpay-two.vercel.app](https://bandpay-two.vercel.app) reads the live feeds and the plans already on the contracts, and says what `release` would do if Hedera called it now. `schedule.mjs` will not sign a schedule that expires before `executeAt`, because that call reverts and the escrow just sits there.
+A registry template stops at the credit. This one starts at the payment: an escrow, a time, and a band. The desk at [bandpay-two.vercel.app](https://bandpay-two.vercel.app) reads the live feeds and the plans already on the contracts, and says what `release` would do if Hedera called it now. Two of those HBAR plans stay open on purpose: one band contains today's price, and one does not. `schedule.mjs` will not sign a schedule that expires before `executeAt`, because that call reverts and the escrow just sits there.
 
 ## What breaks if you remove it
 
@@ -37,7 +39,7 @@ The page is the desk. These files are the template:
 | [`packages/nextjs/lib/plans.js`](packages/nextjs/lib/plans.js) | Decodes `plans(id)` and says whether `release` would pay, revert, or fire too early. |
 | [`packages/rules/decide.js`](packages/rules/decide.js) | The same gate as the contract, so you can see a revert before you sign. |
 | [`packages/hardhat/scripts/deploy.js`](packages/hardhat/scripts/deploy.js) | Deploys against the public testnet feeds and prints the `0.0.x` id. The key stays in the shell. |
-| [`packages/hardhat/scripts/fund.js`](packages/hardhat/scripts/fund.js) | Escrows 0.1 HBAR and prints the plan id. Without this, there is nothing for the schedule to release. |
+| [`packages/hardhat/scripts/fund.js`](packages/hardhat/scripts/fund.js) | Escrows 0.1 HBAR and prints the plan id. `MIN_USD` and `MAX_USD` narrow the band. Without this, there is nothing for the schedule to release. |
 
 ## 15 minutes
 
@@ -79,6 +81,15 @@ npm run schedule --workspace=@bandpay/schedule
 npm run check
 ```
 
+Leave `MIN_USD` and `MAX_USD` unset for that first payment. The default band is about `0` to `1000` USD, so a fresh feed can pay. Set them when you want the desk to show a refusal:
+
+```bash
+export MIN_USD=1
+export MAX_USD=2
+export DUE_IN_SECONDS=60
+node packages/hardhat/scripts/fund.js
+```
+
 `fund.js` prints `planId`. The schedule must expire after `executeAt`. If it does not, `schedule.mjs` exits and signs nothing. Hedera then calls `release`. If the feeds disagree, are stale, or sit outside the band, the call reverts and the escrow stays until `cancel`.
 
 ## HTS
@@ -103,6 +114,13 @@ The first deployment is the schedule proof. It pays HBAR and does not have `asso
 | Contract created | [deploy](https://hashscan.io/testnet/transaction/0xd613652f5b29cdcc0c5eaf144956800c7fb7b706cf5927c66ff4e27340f5e002) |
 | Payer called `release` while both feeds were fresh and inside the band. 0.1 HBAR was paid. | [release](https://hashscan.io/testnet/transaction/0xbced1142081f0b901f09aa4637dc18a2b298bcef44215eb4e749f183cb51749f) |
 | A second 0.1 HBAR was escrowed, then a wait-for-expiry schedule called `release`. Hedera executed it. The plan is paid. | [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928) · [executed call](https://hashscan.io/testnet/transaction/0.0.10015230-1790921501-362680160) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10820928) |
+
+Two later escrows on that same contract are still open. The desk judges them against the live feeds. Neither has been scheduled.
+
+| What happened | Proof |
+| --- | --- |
+| Plan 2 escrows 0.1 HBAR inside a wide band. After `executeAt`, `release` would pay. | [fund plan 2](https://hashscan.io/testnet/transaction/0xbc3b5e2db42ff355046452f45edb1377447d23686ae57771d52eeff53676f7bc) |
+| Plan 3 escrows 0.1 HBAR inside a 1–2 USD band. Today's price is about 0.10, so `release` would revert and the escrow would stay. | [fund plan 3](https://hashscan.io/testnet/transaction/0x4baaa1c305fa5c5d01e948fe8544288ac337c746148c34de295b77d766199993) |
 
 The current deployment adds `associate`. HTS token [0.0.10823214](https://hashscan.io/testnet/token/0.0.10823214) was associated, escrowed, and returned: [0.0.10823213](https://hashscan.io/testnet/contract/0.0.10823213).
 

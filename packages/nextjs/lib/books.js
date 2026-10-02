@@ -4,7 +4,7 @@ const PROOF = [
   {
     id: "0.0.10820921",
     address: "0x87aca0b7ad05e10f7ce953827d9a8b3a8231d9b2",
-    note: "HBAR. The wait-for-expiry schedule called release here.",
+    note: "HBAR. Schedule 0.0.10820928 paid plan 1. Later plans stay open so this desk can still judge them.",
   },
   {
     id: "0.0.10823213",

@@ -25,3 +25,15 @@ test("refuses a schedule that would fire before the plan is due", () => {
 test("a paid plan is not schedulable", () => {
   assert.throws(() => assertSchedulable({ funded: true, paid: true, cancelled: false, executeAt: 1 }, 2), /not an open escrow/);
 });
+
+test("an open plan inside the band would pay, and one outside would not", () => {
+  const feeds = {
+    maxAge: 3600,
+    chainlink: { price: 0.1, ageSec: 30, fresh: true },
+    supra: { price: 0.101, ageSec: 30, fresh: true },
+  };
+  const open = { funded: true, paid: false, cancelled: false, executeAt: 1_000, minPrice: 0.05, maxPrice: 0.2 };
+  assert.equal(explain(open, feeds, 500).state, "too-early");
+  assert.equal(explain(open, feeds, 1_000).state, "would-pay");
+  assert.equal(explain({ ...open, minPrice: 1, maxPrice: 2 }, feeds, 1_000).state, "outside-band");
+});

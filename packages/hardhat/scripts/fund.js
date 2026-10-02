@@ -5,8 +5,17 @@
  *   export BANDPAY_CONTRACT_ID=0.0.YOUR_CONTRACT
  *   export DUE_IN_SECONDS=120
  *   node packages/hardhat/scripts/fund.js
+ *
+ * Optional MIN_USD and MAX_USD narrow the band. Unset, the band is wide enough
+ * that a fresh HBAR/USD feed can pay. JSON-RPC value is 18-decimal weibar;
+ * Hedera stores msg.value as tinybar, so 0.1 HBAR is ethers.parseEther("0.1").
  */
 const { ethers } = require("ethers");
+function usd8(raw) {
+  if (!/^\d+(\.\d{1,8})?$/.test(raw)) throw new Error("MIN_USD and MAX_USD must be a USD amount with at most 8 decimals.");
+  const [whole, frac = ""] = raw.split(".");
+  return BigInt(whole) * 100_000_000n + BigInt((frac + "00000000").slice(0, 8));
+}
 const artifact = require("../artifacts/contracts/BandPay.sol/BandPay.json");
 
 async function contractAddress(id) {
@@ -23,6 +32,10 @@ async function main() {
   const id = process.env.BANDPAY_CONTRACT_ID;
   if (!key || !id) throw new Error("Set DEPLOYER_PRIVATE_KEY and BANDPAY_CONTRACT_ID. Never commit the key.");
   const due = Number(process.env.DUE_IN_SECONDS || "120");
+  if (!Number.isFinite(due) || due < 0) throw new Error("DUE_IN_SECONDS must be a non-negative number.");
+  const minPrice = process.env.MIN_USD ? usd8(process.env.MIN_USD) : 1n;
+  const maxPrice = process.env.MAX_USD ? usd8(process.env.MAX_USD) : 1000n * 10n ** 8n;
+  if (minPrice <= 0n || maxPrice < minPrice) throw new Error("The band is empty.");
   const provider = new ethers.JsonRpcProvider(process.env.HEDERA_RPC_URL || "https://testnet.hashio.io/api", 296, {
     staticNetwork: true,
   });
@@ -31,7 +44,7 @@ async function main() {
   const band = new ethers.Contract(await contractAddress(id), artifact.abi, wallet);
   const planId = await band.nextId();
   const executeAt = Math.floor(Date.now() / 1000) + due;
-  const tx = await band.fundHbar(wallet.address, 1, 1000n * 10n ** 8n, executeAt, {
+  const tx = await band.fundHbar(wallet.address, minPrice, maxPrice, executeAt, {
     type: 0,
     gasPrice,
     gasLimit: 1_000_000n,
@@ -41,6 +54,8 @@ async function main() {
   console.log(JSON.stringify({
     planId: planId.toString(),
     executeAt,
+    minPrice: minPrice.toString(),
+    maxPrice: maxPrice.toString(),
     fundTx: tx.hash,
     status: receipt.status,
     scheduleAfterSeconds: due + 30,
