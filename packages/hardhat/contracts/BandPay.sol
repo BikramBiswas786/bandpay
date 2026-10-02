@@ -82,7 +82,7 @@ contract BandPay {
     );
     event Released(uint256 indexed id, int256 price, uint256 payout);
     event Cancelled(uint256 indexed id);
-    event Attempted(uint256 indexed id, bool paid);
+    event Attempted(uint256 indexed id, bool paid, bytes reason);
 
     /// @dev Hedera response code SUCCESS. Anything else means the token was not associated.
     int64 internal constant HTS_SUCCESS = 22;
@@ -164,13 +164,13 @@ contract BandPay {
     }
 
     /// @notice Same payment as release, but a refusal is caught. The schedule transaction succeeds either way.
-    ///         Attempted is emitted for a pay and for a refusal, so the mirror log has both.
+    ///         reason is empty when it paid, and the revert bytes (OutsideBand, NoPrice, Disagree, TooEarly, Underfunded) when it did not.
     function attempt(uint256 id) external {
         if (msg.sender != plans[id].payer) revert NotPayer();
         try this.releaseFromAttempt(id) {
-            emit Attempted(id, true);
-        } catch {
-            emit Attempted(id, false);
+            emit Attempted(id, true, "");
+        } catch (bytes memory reason) {
+            emit Attempted(id, false, reason);
         }
     }
 

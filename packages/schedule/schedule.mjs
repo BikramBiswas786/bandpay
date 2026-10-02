@@ -1,4 +1,4 @@
-import { seriesStep } from "./series.js";
+import { assertSeriesFits, seriesStep } from "./series.js";
 import { createRequire } from "node:module";
 import {
   AccountId,
@@ -41,6 +41,7 @@ if (!evm) throw new Error(`No EVM address for ${contractId}.`);
 
 const count = Number(process.env.COUNT || "1");
 const every = Number(process.env.EVERY_SECONDS || "0");
+assertSeriesFits(dueInSeconds, count, every);
 seriesStep(planId, 0, count, every);
 
 const plans = await readPlans(net.rpc, evm);

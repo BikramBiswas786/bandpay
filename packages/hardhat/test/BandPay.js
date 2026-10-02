@@ -203,7 +203,15 @@ describe("BandPay", function () {
     await band.fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now, {
       value: ethers.parseEther("1"),
     });
-    await expect(band.attempt(0)).to.emit(band, "Attempted").withArgs(0, false);
+    const refused = await band.attempt(0);
+    const refusedReceipt = await refused.wait();
+    const refusedLog = refusedReceipt.logs
+      .map((entry) => band.interface.parseLog(entry))
+      .find((entry) => entry && entry.name === "Attempted");
+    expect(refusedLog.args.paid).to.equal(false);
+    expect(refusedLog.args.reason.slice(0, 10)).to.equal(
+      band.interface.getError("OutsideBand").selector,
+    );
     expect((await band.plans(0)).paid).to.equal(false);
     expect(await ethers.provider.getBalance(await band.getAddress())).to.equal(
       ethers.parseEther("1"),
@@ -216,7 +224,13 @@ describe("BandPay", function () {
     await band.fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now, {
       value: ethers.parseEther("1"),
     });
-    await expect(band.attempt(0)).to.emit(band, "Attempted").withArgs(0, true);
+    const paid = await band.attempt(0);
+    const paidReceipt = await paid.wait();
+    const paidLog = paidReceipt.logs
+      .map((entry) => band.interface.parseLog(entry))
+      .find((entry) => entry && entry.name === "Attempted");
+    expect(paidLog.args.paid).to.equal(true);
+    expect(paidLog.args.reason).to.equal("0x");
     expect((await band.plans(0)).paid).to.equal(true);
   });
 });

@@ -17,3 +17,20 @@ export function seriesStep(startId, index, count, everySeconds) {
   }
   return { planId: start + step, extraSeconds: step * every };
 }
+
+/** Hedera refuses a schedule whose expiration is more than 62 days out. */
+export const MAX_SCHEDULE_SECONDS = 62 * 24 * 60 * 60;
+
+export function assertSeriesFits(dueInSeconds, count, everySeconds) {
+  const due = Number(dueInSeconds);
+  const plans = Number(count);
+  const every = Number(everySeconds || 0);
+  if (!Number.isInteger(due) || due < 0)
+    throw new Error("DUE_IN_SECONDS must be a non-negative integer.");
+  const last = seriesStep(0, Math.max(plans, 1) - 1, plans, every);
+  if (due + last.extraSeconds > MAX_SCHEDULE_SECONDS) {
+    throw new Error(
+      "The last instalment is more than 62 days out. Hedera will not create that schedule.",
+    );
+  }
+}

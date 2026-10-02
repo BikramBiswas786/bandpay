@@ -12,6 +12,7 @@
  */
 const { ethers } = require("ethers");
 const { currentNetwork } = require("../../nextjs/lib/network");
+const { escrowTinybar, weiForTinybar } = require("../../rules/escrow");
 function usd8(raw) {
   if (!/^\d+(\.\d{1,8})?$/.test(raw))
     throw new Error("MIN_USD and MAX_USD must be a USD amount with at most 8 decimals.");
@@ -49,21 +50,41 @@ async function main() {
   const planId = await band.nextId();
   const executeAt = Math.floor(Date.now() / 1000) + due;
   const amountHbar = process.env.AMOUNT_HBAR || "0.1";
-  if (!/^\d+(\.\d{1,8})?$/.test(amountHbar)) {
-    throw new Error("AMOUNT_HBAR must be an HBAR amount with at most 8 decimals.");
+  const usdAmount = process.env.USD_AMOUNT || "";
+  if (usdAmount && process.env.AMOUNT_HBAR) {
+    throw new Error("Set USD_AMOUNT or AMOUNT_HBAR, not both.");
   }
-  const value = ethers.parseEther(amountHbar);
-  if (value <= 0n) throw new Error("AMOUNT_HBAR must be greater than 0.");
+  let value;
+  let usd = 0n;
+  let tiny = null;
+  if (usdAmount) {
+    usd = usd8(usdAmount);
+    tiny = escrowTinybar(usd, minPrice);
+    value = weiForTinybar(tiny);
+  } else {
+    if (!/^\d+(\.\d{1,8})?$/.test(amountHbar)) {
+      throw new Error("AMOUNT_HBAR must be an HBAR amount with at most 8 decimals.");
+    }
+    value = ethers.parseEther(amountHbar);
+  }
+  if (value <= 0n) throw new Error("The escrow must be greater than 0.");
   const recipient =
     process.env.RECIPIENT && process.env.RECIPIENT.startsWith("0x")
       ? process.env.RECIPIENT
       : wallet.address;
-  const tx = await band.fundHbar(recipient, minPrice, maxPrice, executeAt, {
-    type: 0,
-    gasPrice,
-    gasLimit: 1_000_000n,
-    value,
-  });
+  const tx = usd
+    ? await band.fundHbarUsd(recipient, usd, minPrice, maxPrice, executeAt, {
+        type: 0,
+        gasPrice,
+        gasLimit: 1_000_000n,
+        value,
+      })
+    : await band.fundHbar(recipient, minPrice, maxPrice, executeAt, {
+        type: 0,
+        gasPrice,
+        gasLimit: 1_000_000n,
+        value,
+      });
   const receipt = await tx.wait();
   console.log(
     JSON.stringify({
@@ -72,6 +93,8 @@ async function main() {
       minPrice: minPrice.toString(),
       maxPrice: maxPrice.toString(),
       amountHbar,
+      usdAmount: usd ? usd.toString() : null,
+      escrowTinybar: tiny === null ? null : tiny.toString(),
       fundTx: tx.hash,
       status: receipt.status,
       scheduleAfterSeconds: due + 30,

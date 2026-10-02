@@ -59,7 +59,13 @@ The evidence, all signed by the exposed account above:
 
 `fundHbarUsd` is the payroll case. The payer escrows HBAR for a dollar invoice. When the schedule fires, `release` uses the checked price, pays that many HBAR, and refunds the rest. If the dollars no longer fit in the escrow, it reverts `Underfunded`. `fundHbarInstallments` splits one escrow into at most 12 plans. `COUNT` and `EVERY_SECONDS` sign one wait-for-expiry schedule per plan. The plan amounts add up to the escrow, and a thirteenth instalment is refused.
 
-`release` is the one-shot. If you schedule `attempt` instead, a refusal is caught, the escrow still stays, and `Attempted` is logged either way. There is no HCS precompile, so the contract cannot write the topic itself. After the schedule has a mirror result, `node packages/schedule/receipt.mjs` writes `{template, planId, result, scheduleId}` to `BANDPAY_TOPIC_ID`. That message is capped at 1024 bytes. It is not on testnet yet, because there is no clean account here to create the topic.
+`release` is the one-shot. If you schedule `attempt` instead, a refusal is caught, the escrow still stays, and `Attempted` is logged either way, with the revert bytes (`OutsideBand`, `NoPrice`, `Disagree`, `TooEarly`, or `Underfunded`). Hashscan shows that schedule as SUCCESS even when nothing was paid. Read the `Attempted` log. The raw `release` revert, on the old contract, is what a red transaction looks like.
+
+`USD_AMOUNT` on `fund.js` escrows `usdAmount / minPrice` HBAR. Inside the band the price cannot be below `minPrice`, so the invoice cannot ask for more HBAR than the escrow. A token plan is still judged on the HBAR price, and a USD invoice rejects a token on purpose.
+
+A schedule cannot expire more than 62 days out. `schedule.mjs` refuses a series whose last instalment is past that. Twelve monthly plans cannot all be signed at once.
+
+There is no HCS precompile, so the contract cannot write the topic itself. After the schedule has a mirror result, `node packages/schedule/receipt.mjs` writes `{template, planId, result, scheduleId}` to `BANDPAY_TOPIC_ID`. That message is capped at 1024 bytes.
 
 ## How a payment moves
 
