@@ -2,6 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { decide } from "../lib/decide";
+import {
+  balanceOf,
+  callAction,
+  connect,
+  encodeCancel,
+  encodeRelease,
+  formatHbar,
+  fund,
+  parseHbar,
+  shortAccount,
+} from "../lib/wallet";
 
 const hour = 3600;
 
@@ -24,6 +35,11 @@ export default function Page() {
   const [max, setMax] = useState("0.20");
   const [minutes, setMinutes] = useState("60");
   const [copied, setCopied] = useState("");
+  const [account, setAccount] = useState("");
+  const [balance, setBalance] = useState("");
+  const [busy, setBusy] = useState("");
+  const [log, setLog] = useState([]);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let stop = false;
@@ -46,7 +62,7 @@ export default function Page() {
       stop = true;
       clearInterval(timer);
     };
-  }, []);
+  }, [reload]);
 
   const feeds = desk?.feeds;
   const decision = useMemo(() => {
@@ -78,11 +94,133 @@ export default function Page() {
     }
   }
 
+  function push(line) {
+    setLog((prev) => [...prev, `${prev.length + 1}. ${line}`]);
+  }
+
+  function injected() {
+    if (typeof window === "undefined") return null;
+    return window.ethereum || null;
+  }
+
+  async function remember(address) {
+    setAccount(address);
+    const wei = await balanceOf(injected(), address);
+    setBalance(formatHbar(wei));
+  }
+
+  async function onConnect() {
+    const eth = injected();
+    if (!eth) {
+      throw new Error(
+        "No wallet in this browser. Install MetaMask or HashPack and open the page there.",
+      );
+    }
+    const address = await connect(eth);
+    await remember(address);
+    push(`Connected ${shortAccount(address)} on Hedera testnet.`);
+  }
+
+  async function onFund() {
+    const result = await fund(injected(), {
+      from: account,
+      amount,
+      minUsd: min,
+      maxUsd: max,
+      dueSeconds,
+    });
+    push(`Funded plan ${result.planId}. ${result.hash}`);
+    setReload((value) => value + 1);
+    await remember(account);
+  }
+
+  async function onChecks() {
+    const eth = injected();
+    const wei = await balanceOf(eth, account);
+    if (wei < parseHbar("0.15")) {
+      throw new Error(
+        `Balance is ${formatHbar(wei)} HBAR. Each check escrows 0.1 and returns it. Use the faucet if this is short.`,
+      );
+    }
+    push("Pay check: fund 0.1 HBAR inside 0.05-0.20, due now.");
+    const paid = await fund(eth, {
+      from: account,
+      amount: "0.1",
+      minUsd: "0.05",
+      maxUsd: "0.20",
+      dueSeconds: 0,
+    });
+    push(`Plan ${paid.planId} funded. Releasing.`);
+    const released = await callAction(eth, account, encodeRelease(paid.planId));
+    if (released.reason === "rejected") throw new Error("You rejected the signature. Stopped.");
+    if (!released.ok) {
+      await callAction(eth, account, encodeCancel(paid.planId));
+      throw new Error(`Pay check did not pay (${released.reason}). The escrow was cancelled.`);
+    }
+    push("Pay check passed.");
+
+    push("Refuse check: fund 0.1 HBAR inside 1-2.");
+    const refused = await fund(eth, {
+      from: account,
+      amount: "0.1",
+      minUsd: "1",
+      maxUsd: "2",
+      dueSeconds: 0,
+    });
+    const refuseRelease = await callAction(eth, account, encodeRelease(refused.planId));
+    if (refuseRelease.reason === "rejected") {
+      throw new Error("You rejected the signature. That plan is still escrowed.");
+    }
+    if (refuseRelease.ok) throw new Error("Refuse check paid. The band should have reverted.");
+    const refuseCancel = await callAction(eth, account, encodeCancel(refused.planId));
+    if (!refuseCancel.ok) {
+      throw new Error(`Release reverted (${refuseRelease.reason}) but cancel failed.`);
+    }
+    push(`Refuse check passed. Release returned ${refuseRelease.reason}. Escrow cancelled.`);
+
+    push("Too-early check: due in one hour.");
+    const early = await fund(eth, {
+      from: account,
+      amount: "0.1",
+      minUsd: "0.05",
+      maxUsd: "0.20",
+      dueSeconds: 3600,
+    });
+    const earlyRelease = await callAction(eth, account, encodeRelease(early.planId));
+    if (earlyRelease.reason === "rejected") {
+      throw new Error("You rejected the signature. That plan is still escrowed.");
+    }
+    if (earlyRelease.ok) throw new Error("Too-early check paid. It should have reverted.");
+    const earlyCancel = await callAction(eth, account, encodeCancel(early.planId));
+    if (!earlyCancel.ok) {
+      throw new Error(`Release reverted (${earlyRelease.reason}) but cancel failed.`);
+    }
+    push(`Too-early check passed. Release returned ${earlyRelease.reason}. Escrow cancelled.`);
+    push("Done. Three checks ran from the wallet.");
+    setReload((value) => value + 1);
+    await remember(account);
+  }
+
+  async function run(label, task) {
+    setBusy(label);
+    try {
+      await task();
+    } catch (err) {
+      push(err instanceof Error ? err.message : "The wallet call failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   return (
     <main className="wrap">
       <header className="top">
         <p className="mark">Bandpay</p>
-        <p className="quiet">Testnet. This page never asks for a key.</p>
+        <p className="quiet">
+          {account
+            ? `${shortAccount(account)} · ${balance || "…"} HBAR`
+            : "MetaMask or HashPack. The page never sees the key."}
+        </p>
       </header>
 
       <p className="kicker">Not a registry. A scheduled payment.</p>
@@ -204,8 +342,62 @@ export default function Page() {
       </section>
 
       <section className="section">
-        <h2>3. Run it</h2>
-        <p>The page cannot sign. Copy this. Put the key in the shell only, after you deploy.</p>
+        <h2>3. Sign the checks</h2>
+        <p>
+          Connect on Hedera testnet. The three checks fund 0.1 HBAR on{" "}
+          <a href="https://hashscan.io/testnet/contract/0.0.10820921">0.0.10820921</a>, call{" "}
+          <code>release</code>, and cancel anything that does not pay you back. You need a little
+          testnet HBAR from the <a href="https://portal.hedera.com/faucet">faucet</a>. An EVM wallet
+          cannot sign a schedule, so that path stays in the shell.
+        </p>
+        <div className="actions">
+          {!account ? (
+            <button
+              type="button"
+              className="primary"
+              disabled={Boolean(busy)}
+              onClick={() => run("connect", onConnect)}
+            >
+              {busy === "connect" ? "Waiting for the wallet…" : "Connect wallet"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="primary"
+              disabled={Boolean(busy)}
+              onClick={() => run("checks", () => onChecks())}
+            >
+              {busy === "checks" ? "Waiting for signatures…" : "Run the three checks"}
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={!account || Boolean(busy)}
+            onClick={() => run("fund", () => onFund())}
+          >
+            Fund this payment
+          </button>
+        </div>
+        {account ? (
+          <p className="meta">
+            Fund this payment uses the amount and band above. It does not call release.
+          </p>
+        ) : null}
+        {log.length ? (
+          <ul className="log">
+            {log.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <section className="section">
+        <h2>4. Or sign from the shell</h2>
+        <p>
+          The schedule is a Hedera transaction, not an EVM one. Copy this when you want Hedera to
+          fire <code>release</code> with no bot.
+        </p>
         <pre className="command">{command}</pre>
         <div className="actions">
           <button type="button" className="primary" onClick={() => copy(command, "command")}>

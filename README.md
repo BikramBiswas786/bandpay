@@ -93,7 +93,7 @@ npm run dev
 
 `npm run check` does use the network. It reads Chainlink, Supra, and the escrows already on testnet, and prints what `release` would do right now. No key. Set `BANDPAY_CONTRACT_ID` when you want your own deployment instead of the proof contracts.
 
-`npm run dev` is that same check, in the browser, at `http://localhost:3000`. The page lets you set the amount, the band, and the due time. Two buttons load a band that would pay and a band that would refuse. It copies the `fund.js` and `schedule.mjs` commands. It does not ask for a key. `AMOUNT_HBAR` on `fund.js` defaults to 0.1.
+`npm run dev` is that same check, in the browser, at `http://localhost:3000`. Connect MetaMask or HashPack on Hedera testnet and run the three checks: a release that pays, a release the band reverts, and a release that is too early. Each one is a transaction on `0.0.10820921`. The page does not read the key. An EVM wallet cannot create the schedule, so that command stays below. `AMOUNT_HBAR` on `fund.js` defaults to 0.1.
 
 ## One payment, with a key
 

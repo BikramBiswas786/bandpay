@@ -272,10 +272,24 @@ button {
   color: var(--ink);
 }
 
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 button.primary {
   background: var(--copper-deep);
   color: #f8f3ea;
   border-color: var(--copper-deep);
+}
+
+.log {
+  margin: 14px 0 0;
+  padding-left: 1.2rem;
+}
+
+.log li {
+  margin: 4px 0;
 }
 
 .command {
