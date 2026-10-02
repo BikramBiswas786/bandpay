@@ -1,29 +1,16 @@
 import { readFeeds } from "../../../lib/feeds";
 import { explain, readPlans } from "../../../lib/plans";
+import { MIRROR, loadBooks } from "../../../lib/books";
 
 export const dynamic = "force-dynamic";
 
 const RPC = "https://testnet.hashio.io/api";
-const MIRROR = "https://testnet.mirrornode.hedera.com";
-
-const BOOKS = [
-  {
-    id: "0.0.10820921",
-    address: "0x87aca0b7ad05e10f7ce953827d9a8b3a8231d9b2",
-    note: "HBAR. The wait-for-expiry schedule called release here.",
-  },
-  {
-    id: "0.0.10823213",
-    address: "0xa0F8f874341C54C89EE9A2178318Cfa504da7705",
-    note: "HTS. associate, then fundToken, then cancel.",
-  },
-];
 
 export async function GET() {
   try {
     const feeds = await readFeeds(RPC);
     const books = [];
-    for (const book of BOOKS) {
+    for (const book of await loadBooks()) {
       const plans = await readPlans(RPC, book.address);
       books.push({
         ...book,

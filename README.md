@@ -7,6 +7,7 @@ npm create scaffold-hbar@latest -- --template BikramBiswas786/bandpay
 cd bandpay
 npm install
 npm test
+npm run check
 npm run dev
 ```
 
@@ -35,7 +36,8 @@ The page is the desk. These files are the template:
 | [`packages/nextjs/lib/feeds.js`](packages/nextjs/lib/feeds.js) | The two `eth_call`s. Supra's clock is milliseconds. Chainlink's is seconds. Both get scaled to 8 decimals. |
 | [`packages/nextjs/lib/plans.js`](packages/nextjs/lib/plans.js) | Decodes `plans(id)` and says whether `release` would pay, revert, or fire too early. |
 | [`packages/rules/decide.js`](packages/rules/decide.js) | The same gate as the contract, so you can see a revert before you sign. |
-| [`packages/hardhat/scripts/deploy.js`](packages/hardhat/scripts/deploy.js) | Deploys against the public testnet feeds. The key stays in the shell. |
+| [`packages/hardhat/scripts/deploy.js`](packages/hardhat/scripts/deploy.js) | Deploys against the public testnet feeds and prints the `0.0.x` id. The key stays in the shell. |
+| [`packages/hardhat/scripts/fund.js`](packages/hardhat/scripts/fund.js) | Escrows 0.1 HBAR and prints the plan id. Without this, there is nothing for the schedule to release. |
 
 ## 15 minutes
 
@@ -44,12 +46,40 @@ Node 20.18.3 or newer.
 ```bash
 npm install
 npm test
+npm run check
 npm run dev
 ```
 
-`npm test` compiles the contract and runs the price rule, the feed decoder, the plan decoder, and eight contract cases: both feeds agree, Chainlink stale, the feeds disagree, both stale, outside the band then cancel, a stranger and an early call, an ERC-20 stand-in for an HTS facade, and the HTS precompile associate (success code 22, any other code reverts). The plan decoder also refuses a schedule that would fire before `executeAt`.
+`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, and eight contract cases.
 
-`npm run dev` serves the desk at `http://localhost:3000`. It reads the public testnet RPC. There is no key in the browser.
+`npm run check` does use the network. It reads Chainlink, Supra, and the escrows already on testnet, and prints what `release` would do right now. No key. Set `BANDPAY_CONTRACT_ID` when you want your own deployment instead of the proof contracts.
+
+`npm run dev` is that same check, in the browser, at `http://localhost:3000`.
+
+## One payment, with a key
+
+A brand-new account from the [Hedera portal](https://portal.hedera.com) must be ECDSA, on testnet, and hold HBAR. Put the key in the shell only.
+
+```bash
+export DEPLOYER_PRIVATE_KEY=0xYOUR_ECDSA_KEY
+export HEDERA_OPERATOR_ID=0.0.YOUR_ACCOUNT
+export HEDERA_OPERATOR_KEY=$DEPLOYER_PRIVATE_KEY
+node packages/hardhat/scripts/deploy.js
+```
+
+The last line prints `contractId`. Then escrow 0.1 HBAR. The band is wide on purpose, so a fresh feed can pay. `DUE_IN_SECONDS` is when `release` becomes legal.
+
+```bash
+export BANDPAY_CONTRACT_ID=0.0.THE_CONTRACT_ID
+export DUE_IN_SECONDS=120
+node packages/hardhat/scripts/fund.js
+export PLAN_ID=0
+export DUE_IN_SECONDS=180
+npm run schedule --workspace=@bandpay/schedule
+npm run check
+```
+
+`fund.js` prints `planId`. The schedule must expire after `executeAt`. If it does not, `schedule.mjs` exits and signs nothing. Hedera then calls `release`. If the feeds disagree, are stale, or sit outside the band, the call reverts and the escrow stays until `cancel`.
 
 ## HTS
 
@@ -83,16 +113,7 @@ The current deployment adds `associate`. HTS token [0.0.10823214](https://hashsc
 | `fundToken` moved 5 units into the contract | [fund](https://hashscan.io/testnet/transaction/0xd22946f8cda8ba2f88e8fdd23403386b184b89cc8bf1c0578e615ed0c3182b8a) |
 | `cancel` sent those 5 units back to the payer | [cancel](https://hashscan.io/testnet/transaction/0x47b23d519e5de3b0b8f391dea8115ac4f9df92fbbf1e2c1cddab057ebafebda2) |
 
-To schedule another one, deploy your own copy. Reuse `0.0.10820921` only if you are the payer `0.0.10015230`. Put the key in the shell, not in a file you commit.
-
-```bash
-export HEDERA_OPERATOR_ID=0.0.YOUR_ACCOUNT
-export HEDERA_OPERATOR_KEY=0xYOUR_ECDSA_KEY
-export BANDPAY_CONTRACT_ID=0.0.YOUR_CONTRACT
-export PLAN_ID=0
-export DUE_IN_SECONDS=3600
-npm run schedule --workspace=@bandpay/schedule
-```
+To schedule another one, deploy your own copy with the commands above. Reuse `0.0.10820921` only if you are the payer `0.0.10015230`. Do not commit the key.
 
 The script sets `waitForExpiry`, so the signed schedule waits until the expiration and then Hedera sends it. The admin key can delete that schedule before then.
 

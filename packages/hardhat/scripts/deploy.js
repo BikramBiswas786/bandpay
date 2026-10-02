@@ -21,7 +21,20 @@ async function main() {
   const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
   const deployed = await factory.deploy(CHAINLINK, SUPRA, 75, 3600, { type: 0, gasPrice, gasLimit: 5_000_000n });
   await deployed.waitForDeployment();
-  console.log(JSON.stringify({ contract: await deployed.getAddress(), deployer: wallet.address }));
+  const contract = await deployed.getAddress();
+  let contractId = null;
+  for (let attempt = 0; attempt < 15; attempt++) {
+    const response = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/contracts/${contract}`);
+    if (response.ok) {
+      const body = await response.json();
+      if (body.contract_id) {
+        contractId = body.contract_id;
+        break;
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  console.log(JSON.stringify({ contract, contractId, deployer: wallet.address }));
 }
 
 main().catch(error => {

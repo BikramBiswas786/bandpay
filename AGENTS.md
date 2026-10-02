@@ -21,7 +21,7 @@ One job. A payer escrows HBAR or an HTS facade token. A wait-for-expiry schedule
 
 ## Copy
 
-Keep `BandPay.sol`, `packages/schedule/schedule.mjs`, `packages/nextjs/lib/feeds.js`, and `packages/rules/decide.js`. The page is the demo of those files.
+Keep `BandPay.sol`, `packages/schedule/schedule.mjs`, `packages/nextjs/lib/feeds.js`, `packages/nextjs/lib/plans.js`, and `packages/rules/decide.js`. `npm run check` is the same read as the page. `fund.js` is how a new escrow is opened. Do not skip the `executeAt` guard in the schedule script.
 
 ## Commands
 
