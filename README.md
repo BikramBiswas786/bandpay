@@ -12,9 +12,7 @@ npm run dev
 
 There is no bot. You sign a schedule once. At the expiry time Hedera calls `release`. If the price is outside the band, or both oracles are stale, or they disagree by more than 3%, the call reverts and the escrow stays yours. Cancel before that and the escrow comes back.
 
-This is not a carbon registry and it does not use Guardian.
-
-The live desk reads the public testnet feeds and applies the same rule as the contract: [bandpay-two.vercel.app](https://bandpay-two.vercel.app).
+A registry template stops at the credit. This one starts at the payment: an escrow, a time, and a band. The desk at [bandpay-two.vercel.app](https://bandpay-two.vercel.app) reads the live feeds and the plans already on the contracts, and says what `release` would do if Hedera called it now. `schedule.mjs` will not sign a schedule that expires before `executeAt`, because that call reverts and the escrow just sits there.
 
 ## What breaks if you remove it
 
@@ -28,14 +26,16 @@ The live desk reads the public testnet feeds and applies the same rule as the co
 
 ## What you copy
 
-The page is a desk. These four files are the template:
+The page is the desk. These files are the template:
 
 | File | Why you keep it |
 | --- | --- |
 | [`packages/hardhat/contracts/BandPay.sol`](packages/hardhat/contracts/BandPay.sol) | Escrow, the band, and the HTS associate call. Deleting the oracle reads makes `release` unable to pay. |
-| [`packages/schedule/schedule.mjs`](packages/schedule/schedule.mjs) | One `ScheduleCreate` with `waitForExpiry`. Hedera is the sender. |
+| [`packages/schedule/schedule.mjs`](packages/schedule/schedule.mjs) | One `ScheduleCreate` with `waitForExpiry`. It reads the plan first and refuses a deadline before `executeAt`. |
 | [`packages/nextjs/lib/feeds.js`](packages/nextjs/lib/feeds.js) | The two `eth_call`s. Supra's clock is milliseconds. Chainlink's is seconds. Both get scaled to 8 decimals. |
+| [`packages/nextjs/lib/plans.js`](packages/nextjs/lib/plans.js) | Decodes `plans(id)` and says whether `release` would pay, revert, or fire too early. |
 | [`packages/rules/decide.js`](packages/rules/decide.js) | The same gate as the contract, so you can see a revert before you sign. |
+| [`packages/hardhat/scripts/deploy.js`](packages/hardhat/scripts/deploy.js) | Deploys against the public testnet feeds. The key stays in the shell. |
 
 ## 15 minutes
 
@@ -47,7 +47,7 @@ npm test
 npm run dev
 ```
 
-`npm test` compiles the contract and runs the price rule, the feed decoder, and eight contract cases: both feeds agree, Chainlink stale, the feeds disagree, both stale, outside the band then cancel, a stranger and an early call, an ERC-20 stand-in for an HTS facade, and the HTS precompile associate (success code 22, any other code reverts).
+`npm test` compiles the contract and runs the price rule, the feed decoder, the plan decoder, and eight contract cases: both feeds agree, Chainlink stale, the feeds disagree, both stale, outside the band then cancel, a stranger and an early call, an ERC-20 stand-in for an HTS facade, and the HTS precompile associate (success code 22, any other code reverts). The plan decoder also refuses a schedule that would fire before `executeAt`.
 
 `npm run dev` serves the desk at `http://localhost:3000`. It reads the public testnet RPC. There is no key in the browser.
 

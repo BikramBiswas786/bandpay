@@ -84,4 +84,5 @@ module.exports = {
   decodeChainlink,
   decodeSupra,
   readFeeds,
+  ethCall,
 };

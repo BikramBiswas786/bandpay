@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "node --test packages/rules/decide.test.js packages/nextjs/lib/feeds.test.js && npm test --workspace=@bandpay/hardhat",
+    "test": "node --test packages/rules/decide.test.js packages/nextjs/lib/feeds.test.js packages/nextjs/lib/plans.test.js && npm test --workspace=@bandpay/hardhat",
     "lint": "npm test",
     "build": "npm run build --workspace=@bandpay/nextjs",
     "dev": "npm run dev --workspace=@bandpay/nextjs"
