@@ -1,17 +1,4 @@
-import { Fraunces, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
-
-const display = Fraunces({
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  variable: "--font-display",
-});
-
-const sans = Source_Sans_3({
-  subsets: ["latin"],
-  weight: ["400", "600"],
-  variable: "--font-sans",
-});
 
 export const metadata = {
   title: "Bandpay",
@@ -21,7 +8,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable}`}>
+    <html lang="en">
       <body>{children}</body>
     </html>
   );

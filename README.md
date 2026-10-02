@@ -169,7 +169,7 @@ The current deployment adds `associate`. HTS token [0.0.10823214](https://hashsc
 | `fundToken` moved 5 units into the contract | [fund](https://hashscan.io/testnet/transaction/0xd22946f8cda8ba2f88e8fdd23403386b184b89cc8bf1c0578e615ed0c3182b8a) |
 | `cancel` sent those 5 units back to the payer | [cancel](https://hashscan.io/testnet/transaction/0x47b23d519e5de3b0b8f391dea8115ac4f9df92fbbf1e2c1cddab057ebafebda2) |
 
-To schedule another one, deploy your own copy with the commands above. Reuse `0.0.10820921` only if you are the payer `0.0.10015230`. Do not commit the key.
+To schedule another one, deploy your own copy with the commands above, using your own key. Do not reuse account `0.0.10015230`. Those proof transactions were signed by it, and that key is not a key anyone else should use. Do not commit a key.
 
 The script sets `waitForExpiry`, so the signed schedule waits until the expiration and then Hedera sends it. The admin key can delete that schedule before then.
 

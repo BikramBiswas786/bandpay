@@ -8,8 +8,8 @@
   --mute: #6b6258;
   --ok: #2a5c3a;
   --bad: #8d2f2f;
-  --sans: var(--font-sans), "Segoe UI", sans-serif;
-  --display: var(--font-display), Georgia, serif;
+  --sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --display: Georgia, "Iowan Old Style", Palatino, serif;
 }
 
 * {
