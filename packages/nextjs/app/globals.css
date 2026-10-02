@@ -438,3 +438,29 @@ details.section summary {
   font-family: var(--display);
   font-size: 1.5rem;
 }
+
+.lab {
+  display: grid;
+  gap: 12px;
+}
+
+.tag {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tag.live {
+  color: var(--ok);
+}
+
+.tag.sim {
+  color: var(--copper);
+}
+
+.card .command {
+  margin: 0 0 12px;
+  font-size: 0.75rem;
+}

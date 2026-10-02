@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { decide } from "../lib/decide";
+import { labScenarios } from "../lib/lab";
 import {
   balanceOf,
   callAction,
@@ -79,6 +80,7 @@ export default function Page() {
     return decide({ chainlink, supra, minPrice: Number(min), maxPrice: Number(max) });
   }, [feeds, min, max]);
 
+  const scenarios = useMemo(() => labScenarios(feeds), [feeds]);
   const dueSeconds = Math.max(0, Math.round(Number(minutes) || 0) * 60);
   const command = commandFor({
     amount,
@@ -299,8 +301,9 @@ export default function Page() {
           <p className="kicker">Not a registry. A scheduled payment.</p>
           <h1>Pay only inside the band.</h1>
           <p className="lede">
-            Connect a wallet and run one check at a time. A check that should revert is asked of the
-            node first. The failing call is not sent, so MetaMask does not paint it red.
+            The lab below needs no key. It shows what release would do. Only the first case uses the
+            live feeds. The others are simulations of the same rule. The wallet, further down, is
+            optional.
           </p>
         </div>
         <article className="price-card">
@@ -310,6 +313,61 @@ export default function Page() {
             {gap === null ? "Waiting for both feeds." : `Chainlink and Supra differ by ${gap} bps.`}
           </span>
         </article>
+      </section>
+
+      <section className="section">
+        <h2>Developer lab</h2>
+        <p>
+          No account and no signature. A live row is the testnet price. A simulation changes one
+          input and runs the same rule as the contract. The band on an HTS token is still this
+          HBAR/USD price. The token does not have its own oracle here.
+        </p>
+        <div className="lab">
+          {scenarios.map((item) => (
+            <article key={item.id} className="card">
+              <p className={item.kind === "simulation" ? "tag sim" : "tag live"}>{item.kind}</p>
+              <h2>{item.title}</h2>
+              <p className={item.ok ? "verdict ok" : "verdict bad"}>{item.result}</p>
+              <p className="meta">
+                Test: {item.test}. Code: {item.where}.
+              </p>
+              <pre className="command">{item.command}</pre>
+              <button type="button" onClick={() => copy(item.command)}>
+                Copy
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <h2>One schedule, one attempt</h2>
+        <p>
+          Hedera calls release once, when the schedule expires. If the feed is stale, the feeds
+          disagree, or the price is outside the band, that call reverts and the HBAR stays in the
+          contract. Cancel returns it. Or sign a new schedule for the same plan after the price is
+          back inside the band. A deadline before executeAt never gets signed: schedule.mjs stops.
+        </p>
+        <div className="cards">
+          <article className="card">
+            <h2>Schedule paid</h2>
+            <p>
+              Hedera executed release. The plan was paid. Signed by 0.0.10015230. Do not reuse that
+              account.
+            </p>
+            <a href="https://hashscan.io/testnet/schedule/0.0.10820928">0.0.10820928</a>
+          </article>
+          <article className="card">
+            <h2>Schedule refused</h2>
+            <p>Hedera called release. OutsideBand reverted. The escrow stayed until cancel.</p>
+            <a href="https://hashscan.io/testnet/schedule/0.0.10830733">0.0.10830733</a>
+          </article>
+          <article className="card">
+            <h2>HTS, not scheduled</h2>
+            <p>Associate, fund, and cancel are on testnet. A scheduled token release is not.</p>
+            <a href="https://hashscan.io/testnet/contract/0.0.10823213">0.0.10823213</a>
+          </article>
+        </div>
       </section>
 
       {mine.length ? (

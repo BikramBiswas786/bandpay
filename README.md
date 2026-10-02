@@ -2,9 +2,25 @@
 
 Schedule one payment. Hedera fires it. It clears only inside your price band.
 
+## Start here
+
+Node 20.18.3 or newer. Git must already have a name and an email. The scaffolder makes the first commit, and it stops if those are empty.
+
 ```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
 npm create scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
 ```
+
+That command installs dependencies and selects Hardhat when GitHub returns `template.json`. Do not run `npm install` again. If it asks for Foundry, GitHub did not return the manifest. Run this instead:
+
+```bash
+npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay --solidity-framework hardhat --package-manager npm
+```
+
+### No key
+
+You can run the tests and open the desk before you create an account. The browser never asks for a private key.
 
 ```bash
 cd my-pay
@@ -14,15 +30,32 @@ npm run check
 npm run dev
 ```
 
-That create command is the scaffolder pointed at this repo. It selects Hardhat on its own when GitHub returns `template.json`. If it stops and asks for Foundry, GitHub did not return the manifest, and the fallback looks for Foundry. Run this instead:
+| Command | What it does | Key |
+| --- | --- | --- |
+| `npm test` | Compiles the contract and runs the rule, decoder, instalment, and contract tests | No |
+| `npm run lint` | ESLint, solhint, and Prettier | No |
+| `npm run check` | Reads live Chainlink and Supra and prints what `release` would do | No |
+| `npm run dev` | The desk at `http://localhost:3000` | No |
 
-```bash
-npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay --solidity-framework hardhat --package-manager npm
-```
+The hosted desk is [bandpay-two.vercel.app](https://bandpay-two.vercel.app). Its Developer Lab shows five outcomes. The fresh-feed row is the live testnet price. The other rows are simulations of the same rule. None of them send a transaction.
 
-There is no bot. You sign a schedule once. At the expiry time Hedera calls `release`. If the price is outside the band, or both oracles are stale, or they disagree by more than 3%, the call reverts and the escrow stays yours. Cancel before that and the escrow comes back.
+### With testnet HBAR
 
-A registry template stops at the credit. This one starts at the payment: an escrow, a time, and a band. The desk at [bandpay-two.vercel.app](https://bandpay-two.vercel.app) reads the live feeds and the plans already on the contracts, and says what `release` would do if Hedera called it now. Plan 2 is still open and would pay. Plan 3 was scheduled on purpose: Hedera called `release`, the call reverted, and the 0.1 HBAR is still escrowed. `schedule.mjs` will not sign a deadline before `executeAt`, and it will not sign when the live feeds already say the call would revert, unless `ALLOW_REVERT=1`.
+Only this path needs an account. It must be ECDSA, not ED25519, and it must hold HBAR from the [faucet](https://portal.hedera.com/faucet). Do not reuse `0.0.10015230`. The key stays in the shell. The commands are under [One payment, with a key](#one-payment-with-a-key).
+
+## What the template does
+
+There is no bot. You sign one schedule. At expiry Hedera calls `release` once. If the price is outside the band, a feed is stale and the other is missing, or the two feeds disagree by more than 3%, the call reverts and the escrow stays. `cancel` returns it. You can also sign a new schedule for that same plan once the price is back inside the band. `schedule.mjs` will not sign a deadline before `executeAt`.
+
+The price is always HBAR. Chainlink is HBAR/USD. Supra pair 75 is HBAR/USDT, used only as the fallback for that same price. `fundToken` escrows an HTS token, but it does not look up that token's own price. A developer who needs the token's value checked has to add that feed. This template does not.
+
+The evidence, all signed by the exposed account above:
+
+| What it proves | Link |
+| --- | --- |
+| Hedera executed a scheduled `release` and the plan was paid | [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928) |
+| Hedera fired `release`, `OutsideBand` reverted, and the escrow stayed | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) |
+| An HTS token was associated, escrowed, and returned. Not released by a schedule | [contract 0.0.10823213](https://hashscan.io/testnet/contract/0.0.10823213) |
 
 ## How a payment moves
 
@@ -106,9 +139,11 @@ The page is the desk. These files are the template:
 | [`packages/hardhat/scripts/deploy.js`](packages/hardhat/scripts/deploy.js) | Deploys against the public testnet feeds and prints the `0.0.x` id. The key stays in the shell. |
 | [`packages/hardhat/scripts/fund.js`](packages/hardhat/scripts/fund.js) | Escrows 0.1 HBAR and prints the plan id. `MIN_USD` and `MAX_USD` narrow the band. Without this, there is nothing for the schedule to release. |
 
-## 15 minutes
+## From a clone
 
-Node 20.18.3 or newer.
+The scaffold command already installed dependencies. Use `npm install` only when you cloned the repo yourself.
+
+Node 20.18.3 or newer. Git needs `user.name` and `user.email` before the first commit.
 
 ```bash
 npm install
