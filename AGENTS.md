@@ -11,7 +11,7 @@ One job. A payer escrows HBAR or an HTS facade token. A wait-for-expiry schedule
 - One fresh source is enough. Chainlink first, then Supra.
 - Neither fresh: revert. The escrow stays until `cancel`.
 - Supra pair index is 75 (HBAR/USDT). Timestamps above 1e11 are treated as milliseconds. That conversion lives in the contract and in `packages/nextjs/lib/feeds.js`. Do not drop it.
-- An HTS token must be associated on the contract (`associate`) before `fundToken`. The precompile is `0x167`. Success is response code 22.
+- An HTS token must be associated on the contract (`associate`) before `fundToken`. The precompile is `0x167`. Success is response code 22. The allowance is a Hedera `AccountAllowanceApproveTransaction`. An ERC-20 `approve` on the token facade reverts. `fund-token.js` does both, then `fundToken`.
 
 ## Do not
 

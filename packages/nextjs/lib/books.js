@@ -9,7 +9,7 @@ const PROOF = [
   {
     id: "0.0.10823213",
     address: "0xa0F8f874341C54C89EE9A2178318Cfa504da7705",
-    note: "HTS. associate, then fundToken, then cancel.",
+    note: "HTS. Schedule 0.0.10831792 paid plan 1, 5 BAND. Plan 0 was cancelled.",
   },
 ];
 
@@ -21,6 +21,10 @@ const SCHEDULES = [
   {
     id: "0.0.10830733",
     transactionId: "0.0.10015230-1790970685-448974693",
+  },
+  {
+    id: "0.0.10831792",
+    transactionId: "0.0.10015230-1790976251-653175855",
   },
 ];
 

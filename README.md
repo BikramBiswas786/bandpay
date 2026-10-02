@@ -55,7 +55,7 @@ The evidence, all signed by the exposed account above:
 | --- | --- |
 | Hedera executed a scheduled `release` and the plan was paid | [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928) |
 | Hedera fired `release`, `OutsideBand` reverted, and the escrow stayed | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) |
-| An HTS token was associated, escrowed, and returned. Not released by a schedule | [contract 0.0.10823213](https://hashscan.io/testnet/contract/0.0.10823213) |
+| An HTS token was associated, escrowed, and released by a schedule | [schedule 0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) |
 
 `fundHbarUsd` is the payroll case. The payer escrows HBAR for a dollar invoice. When the schedule fires, `release` uses the checked price, pays that many HBAR, and refunds the rest. If the dollars no longer fit in the escrow, it reverts `Underfunded`. `fundHbarInstallments` splits one escrow into at most 12 plans. `COUNT` and `EVERY_SECONDS` sign one wait-for-expiry schedule per plan. The plan amounts add up to the escrow, and a thirteenth instalment is refused.
 
@@ -152,6 +152,7 @@ The page is the desk. These files are the template:
 | [`packages/rules/decide.js`](packages/rules/decide.js) | The same gate as the contract, so you can see a revert before you sign. |
 | [`packages/hardhat/scripts/deploy.js`](packages/hardhat/scripts/deploy.js) | Deploys against the public testnet feeds and prints the `0.0.x` id. The key stays in the shell. |
 | [`packages/hardhat/scripts/fund.js`](packages/hardhat/scripts/fund.js) | Escrows 0.1 HBAR and prints the plan id. `MIN_USD` and `MAX_USD` narrow the band. Without this, there is nothing for the schedule to release. |
+| [`packages/hardhat/scripts/fund-token.js`](packages/hardhat/scripts/fund-token.js) | Associates the token if needed, approves it with a Hedera allowance, and escrows it. An ERC-20 `approve` on the token facade reverts. |
 
 ## From a clone
 
@@ -211,11 +212,25 @@ node packages/hardhat/scripts/fund.js
 
 ## HTS
 
-`fundToken` moves the token with `transferFrom`. On Hedera that facade call reverts until the contract is associated to the token. Call `associate(tokenSolidityAddress)` once. It hits precompile `0x167` and accepts only response code 22. Then `approve` the contract from the treasury account and call `fundToken`. HBAR does not need this step.
+`fundToken` moves the token with `transferFrom`. On Hedera that call reverts until the contract is associated, and an ERC-20 `approve` on the token facade also reverts. `fund-token.js` associates when the mirror does not already show the token, then sends `AccountAllowanceApproveTransaction`, then `fundToken`.
+
+```bash
+export HEDERA_OPERATOR_ID=0.0.YOUR_ACCOUNT
+export HEDERA_OPERATOR_KEY=$DEPLOYER_PRIVATE_KEY
+export BANDPAY_CONTRACT_ID=0.0.THE_CONTRACT_ID
+export TOKEN_ID=0.0.YOUR_TOKEN
+export DUE_IN_SECONDS=60
+node packages/hardhat/scripts/fund-token.js
+export PLAN_ID=0
+export DUE_IN_SECONDS=120
+npm run schedule --workspace=@bandpay/schedule
+```
+
+HBAR does not need this step. Use `fund.js` for that.
 
 ## Testnet
 
-These links are the proof that Hedera will fire `release`. Every one of them was signed by `0.0.10015230`. That account's key is public. Do not fund it, do not schedule from it, and do not copy it into a new project. A fresh ECDSA account from the portal replaces this table. The faucet API needs a personal access token, which this repo does not have, so the table has not been re-signed.
+These links are the proof that Hedera will fire `release`. Every one of them was signed by `0.0.10015230`. Do not reuse that account. Create a new ECDSA account from the portal. The faucet API needs a personal access token, which this repo does not have.
 
 The contracts below were deployed before `Funded`, `Released`, and `Cancelled` existed. The source emits those events. A new deploy emits them on chain. A scheduled release of an HTS token has not been shown. What is shown for the token is associate, fund, and cancel.
 
@@ -236,7 +251,7 @@ The first deployment is the schedule proof. It pays HBAR and does not have `asso
 | Payer called `release` while both feeds were fresh and inside the band. 0.1 HBAR was paid. | [release](https://hashscan.io/testnet/transaction/0xbced1142081f0b901f09aa4637dc18a2b298bcef44215eb4e749f183cb51749f) |
 | A second 0.1 HBAR was escrowed, then a wait-for-expiry schedule called `release`. Hedera executed it. The plan is paid. | [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928) · [executed call](https://hashscan.io/testnet/transaction/0.0.10015230-1790921501-362680160) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10820928) |
 
-Two later escrows on that same contract are still open. The desk judges them against the live feeds. Neither has been scheduled.
+Plan 2 on that contract is still an open HBAR escrow. Plan 3 was scheduled on purpose and the call reverted.
 
 | What happened | Proof |
 | --- | --- |
@@ -244,7 +259,7 @@ Two later escrows on that same contract are still open. The desk judges them aga
 | Plan 3 escrows 0.1 HBAR inside a 1–2 USD band. Today's price is about 0.10, so `release` would revert and the escrow would stay. | [fund plan 3](https://hashscan.io/testnet/transaction/0x4baaa1c305fa5c5d01e948fe8544288ac337c746148c34de295b77d766199993) |
 | Hedera fired that plan anyway (`ALLOW_REVERT=1`). The scheduled call reverted `OutsideBand` at 0.09903519 USD. Plan 3 is still escrowed, not paid. | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) · [executed call](https://hashscan.io/testnet/transaction/0.0.10015230-1790970685-448974693) · [revert](https://testnet.mirrornode.hedera.com/api/v1/contracts/results/0xb052df49203e6a594a9cf3ca095de72c77677b7b57efbdd6fd04d76a9bcae950) |
 
-The current deployment adds `associate`. HTS token [0.0.10823214](https://hashscan.io/testnet/token/0.0.10823214) was associated, escrowed, and returned: [0.0.10823213](https://hashscan.io/testnet/contract/0.0.10823213). It was not released by a schedule.
+The current deployment adds `associate`. HTS token [0.0.10823214](https://hashscan.io/testnet/token/0.0.10823214) was associated, escrowed, returned, and later escrowed again and paid by a schedule: [0.0.10823213](https://hashscan.io/testnet/contract/0.0.10823213).
 
 | What happened | Proof |
 | --- | --- |
@@ -252,7 +267,8 @@ The current deployment adds `associate`. HTS token [0.0.10823214](https://hashsc
 | `associate` of `BAND` through precompile `0x167` | [associate](https://hashscan.io/testnet/transaction/0xaa56e37772c35c38dbe25cdd59b69bb3643c4e8d112e999c1ba7d3c241dc251a) |
 | `fundToken` moved 5 units into the contract | [fund](https://hashscan.io/testnet/transaction/0xd22946f8cda8ba2f88e8fdd23403386b184b89cc8bf1c0578e615ed0c3182b8a) |
 | `cancel` sent those 5 units back to the payer | [cancel](https://hashscan.io/testnet/transaction/0x47b23d519e5de3b0b8f391dea8115ac4f9df92fbbf1e2c1cddab057ebafebda2) |
-| A schedule called `release` on a token plan | Not on testnet. `release` already sends the token once the plan is funded. This row is the gap. |
+| Plan 1 escrowed 5 BAND inside a wide band | [fund](https://hashscan.io/testnet/transaction/0xfeb0534c8baa281075a65224109dab1871b257e519b1b6b94252b688b3cbadc8) |
+| Hedera called `release`. The call succeeded and the 5 BAND were paid. Plan 1 is paid. | [schedule 0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) · [executed call](https://hashscan.io/testnet/transaction/0.0.10015230-1790976251-653175855) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10831792) |
 
 To replace the table, deploy with your own ECDSA key, fund one HBAR plan and one token plan, and schedule both. Do not commit the key.
 
@@ -276,6 +292,7 @@ A payroll is `fundHbarUsd` for a dollar amount, or `fundHbarInstallments` plus `
 | `Disagree` | The two feeds differ by more than 300 bps. |
 | `NoPrice` | Both feeds are stale or missing. |
 | `Underfunded` | A USD payout would take more HBAR than the escrow. Cancel, or fund a larger escrow. |
+| `ERC-20 approve` reverts on the token | Use `fund-token.js`. The allowance is a Hedera transaction, not an EVM `approve`. |
 
 ## License
 
