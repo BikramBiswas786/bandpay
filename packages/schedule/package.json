@@ -1,0 +1,11 @@
+{
+  "name": "@bandpay/schedule",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "schedule": "node schedule.mjs"
+  },
+  "dependencies": {
+    "@hashgraph/sdk": "^2.68.0"
+  }
+}

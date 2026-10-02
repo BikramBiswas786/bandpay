@@ -1,0 +1,31 @@
+{
+  "name": "bandpay",
+  "description": "Schedule an HBAR or HTS payment. Hedera fires it. The payment reverts unless Chainlink, or Supra if Chainlink is stale, is inside the payer's price band.",
+  "version": "1.0.0",
+  "create-scaffold-hbar": {
+    "template": true,
+    "capabilities": {
+      "frontend": ["nextjs-app"],
+      "solidityFramework": ["hardhat"],
+      "packageManager": ["npm"]
+    },
+    "defaults": {
+      "frontend": "nextjs-app",
+      "solidityFramework": "hardhat",
+      "packageManager": "npm"
+    },
+    "outro": {
+      "installCommand": "npm install",
+      "sections": [
+        {
+          "title": "First run",
+          "steps": [
+            { "label": "Test the price gate", "command": "npm test" },
+            { "label": "Open the rule page", "command": "npm run dev" },
+            { "text": "A testnet schedule needs a funded account. Do not commit the key. See README." }
+          ]
+        }
+      ]
+    }
+  }
+}
