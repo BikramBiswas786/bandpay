@@ -32,7 +32,7 @@ npm test
 npm run dev
 ```
 
-`npm test` compiles the contract and runs seven cases: agree, Chainlink stale, disagree, both stale, outside the band, stranger, too early, and an ERC-20 stand-in for an HTS token. The Next page at `http://localhost:3000` applies the same rule so you can watch a revert before you touch a key.
+`npm test` compiles the contract and runs seven cases: both feeds agree, Chainlink stale, the feeds disagree, both stale, outside the band then cancel, a stranger and an early call, and an ERC-20 stand-in for an HTS token. The Next page at `http://localhost:3000` applies the same rule so you can watch a revert before you touch a key.
 
 ## Testnet
 
