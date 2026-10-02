@@ -464,3 +464,187 @@ details.section summary {
   margin: 0 0 12px;
   font-size: 0.75rem;
 }
+
+.app {
+  min-height: 100vh;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--sheet);
+  position: sticky;
+  top: 0;
+}
+
+.price-pill {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 0.85rem;
+  color: var(--mute);
+}
+
+.price-pill strong {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.frame {
+  display: grid;
+  grid-template-columns: 168px 1fr;
+  min-height: calc(100vh - 58px);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 10px;
+  border-right: 1px solid var(--line);
+}
+
+.nav button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.nav button.on {
+  background: #efe6da;
+  color: var(--copper-deep);
+}
+
+.stage {
+  padding: 22px 28px 64px;
+  max-width: 1040px;
+}
+
+.stage h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  color: var(--ink);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.menu button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 2px 8px;
+  text-align: left;
+  border-radius: 10px;
+  background: transparent;
+}
+
+.menu button.on {
+  background: var(--sheet);
+  border-color: var(--copper);
+}
+
+.menu small {
+  grid-column: 2;
+  color: var(--mute);
+  font-size: 0.72rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 99px;
+  background: var(--mute);
+}
+
+.dot.ok {
+  background: var(--ok);
+}
+
+.dot.bad {
+  background: var(--bad);
+}
+
+.detail {
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.facts {
+  margin: 12px 0;
+}
+
+.facts div {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+
+.facts dt {
+  color: var(--mute);
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.plans {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.plans th,
+.plans td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+@media (max-width: 800px) {
+  .frame,
+  .split,
+  .top {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .price-pill {
+    margin-left: 0;
+  }
+  .nav {
+    flex-direction: row;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+  }
+}

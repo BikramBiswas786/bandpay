@@ -15,6 +15,7 @@ import {
   parseHbar,
   shortAccount,
   simulate,
+  decodeRevert,
 } from "../lib/wallet";
 
 const hour = 3600;
@@ -44,6 +45,8 @@ export default function Page() {
   const [activity, setActivity] = useState([]);
   const [mine, setMine] = useState([]);
   const [reload, setReload] = useState(0);
+  const [view, setView] = useState("lab");
+  const [picked, setPicked] = useState("fresh");
 
   useEffect(() => {
     let stop = false;
@@ -264,27 +267,34 @@ export default function Page() {
     try {
       await task();
     } catch (err) {
-      note("Stopped", err instanceof Error ? err.message : "The wallet call failed.");
+      note("Stopped", decodeRevert(err));
     } finally {
       setBusy("");
     }
   }
 
-  async function copy(text) {
+  async function copy(text, key = "command") {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied("command");
+      setCopied(key);
     } catch {
       setCopied("copy-failed");
     }
   }
 
+  const active = scenarios.find((item) => item.id === picked) || scenarios[0];
+
   return (
-    <main className="wrap">
-      <header className="bar">
-        <div>
+    <main className="app">
+      <header className="top">
+        <div className="brand">
           <span className="mark">Bandpay</span>
-          <span className="net">Hedera testnet</span>
+          <span className="net">Testnet</span>
+        </div>
+        <div className="price-pill">
+          <span>HBAR/USD</span>
+          <strong>{price ? price.toFixed(4) : "…"}</strong>
+          <span>{gap === null ? "feeds" : `${gap} bps`}</span>
         </div>
         <button
           type="button"
@@ -292,290 +302,312 @@ export default function Page() {
           disabled={Boolean(busy)}
           onClick={() => run("connect", onConnect)}
         >
-          {account ? `${shortAccount(account)} · ${balance || "…"} HBAR` : "Connect wallet"}
+          {account ? `${shortAccount(account)} · ${balance || "…"}` : "Connect"}
         </button>
       </header>
-
-      <section className="hero">
-        <div>
-          <p className="kicker">Not a registry. A scheduled payment.</p>
-          <h1>Pay only inside the band.</h1>
-          <p className="lede">
-            The lab below needs no key. It shows what release would do. Only the first case uses the
-            live feeds. The others are simulations of the same rule. The wallet, further down, is
-            optional.
-          </p>
-        </div>
-        <article className="price-card">
-          <span>HBAR / USD</span>
-          <strong>{price ? price.toFixed(4) : "…"}</strong>
-          <span>
-            {gap === null ? "Waiting for both feeds." : `Chainlink and Supra differ by ${gap} bps.`}
-          </span>
-        </article>
-      </section>
-
-      <section className="section">
-        <h2>Developer lab</h2>
-        <p>
-          No account and no signature. A live row is the testnet price. A simulation changes one
-          input and runs the same rule as the contract. The band on an HTS token is still this
-          HBAR/USD price. The token does not have its own oracle here.
-        </p>
-        <div className="lab">
-          {scenarios.map((item) => (
-            <article key={item.id} className="card">
-              <p className={item.kind === "simulation" ? "tag sim" : "tag live"}>{item.kind}</p>
-              <h2>{item.title}</h2>
-              <p className={item.ok ? "verdict ok" : "verdict bad"}>{item.result}</p>
-              <p className="meta">
-                Test: {item.test}. Code: {item.where}.
-              </p>
-              <pre className="command">{item.command}</pre>
-              <button type="button" onClick={() => copy(item.command)}>
-                Copy
-              </button>
-            </article>
+      <div className="frame">
+        <nav className="nav">
+          {[
+            ["lab", "Lab"],
+            ["chain", "Chain"],
+            ["sign", "Sign"],
+            ["schedule", "Schedule"],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={view === id ? "on" : ""}
+              onClick={() => setView(id)}
+            >
+              {label}
+            </button>
           ))}
-        </div>
-      </section>
-
-      <section className="section">
-        <h2>One schedule, one attempt</h2>
-        <p>
-          Hedera calls release once, when the schedule expires. If the feed is stale, the feeds
-          disagree, or the price is outside the band, that call reverts and the HBAR stays in the
-          contract. Cancel returns it. Or sign a new schedule for the same plan after the price is
-          back inside the band. A deadline before executeAt never gets signed: schedule.mjs stops.
-        </p>
-        <div className="cards">
-          <article className="card">
-            <h2>Schedule paid</h2>
-            <p>
-              Hedera executed release. The plan was paid. Signed by 0.0.10015230. Do not reuse that
-              account.
-            </p>
-            <a href="https://hashscan.io/testnet/schedule/0.0.10820928">0.0.10820928</a>
-          </article>
-          <article className="card">
-            <h2>Schedule refused</h2>
-            <p>Hedera called release. OutsideBand reverted. The escrow stayed until cancel.</p>
-            <a href="https://hashscan.io/testnet/schedule/0.0.10830733">0.0.10830733</a>
-          </article>
-          <article className="card">
-            <h2>HTS, not scheduled</h2>
-            <p>Associate, fund, and cancel are on testnet. A scheduled token release is not.</p>
-            <a href="https://hashscan.io/testnet/contract/0.0.10823213">0.0.10823213</a>
-          </article>
-        </div>
-      </section>
-
-      {mine.length ? (
-        <section className="banner">
-          <p>
-            This wallet still has escrow in plan {mine.join(", ")}. The earlier refuse check left
-            one of these open if the run stopped on a red signature.
-          </p>
-          <button type="button" disabled={Boolean(busy)} onClick={() => run("return", onReturn)}>
-            {busy === "return" ? "Returning…" : "Return my escrow"}
-          </button>
-        </section>
-      ) : null}
-
-      <section className="cards">
-        <article className="card">
-          <h2>Pay</h2>
-          <p>
-            Escrow 0.1 HBAR between $0.05 and $0.20, then release it to this wallet. Both
-            transactions succeed.
-          </p>
-          <button
-            type="button"
-            className="primary"
-            disabled={Boolean(busy)}
-            onClick={() => run("pay", onPay)}
-          >
-            {busy === "pay" ? "Waiting for signatures…" : "Run pay"}
-          </button>
-        </article>
-        <article className="card">
-          <h2>Refuse</h2>
-          <p>
-            Escrow between $1 and $2. The node must return OutsideBand. You get the HBAR back. No
-            failed transaction.
-          </p>
-          <button type="button" disabled={Boolean(busy)} onClick={() => run("refuse", onRefuse)}>
-            {busy === "refuse" ? "Waiting for signatures…" : "Run refuse"}
-          </button>
-        </article>
-        <article className="card">
-          <h2>Too early</h2>
-          <p>
-            Due in one hour. Release is blocked, then the escrow comes back. The blocked call is not
-            broadcast.
-          </p>
-          <button type="button" disabled={Boolean(busy)} onClick={() => run("early", onEarly)}>
-            {busy === "early" ? "Waiting for signatures…" : "Run too early"}
-          </button>
-        </article>
-      </section>
-
-      {activity.length ? (
-        <section className="section">
-          <h2>This session</h2>
-          <ul className="activity">
-            {activity.map((item) => (
-              <li key={item.key}>
-                <strong>{item.title}</strong>
-                <span>
-                  {item.detail}{" "}
-                  {item.href ? (
-                    <a href={item.href} target="_blank" rel="noreferrer">
-                      Hashscan
-                    </a>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {error ? <p className="stale">{error}</p> : null}
-
-      <section className="section">
-        <h2>Your own band</h2>
-        <p>
-          This only escrows. It does not release. The wallet max fee can look larger than the HBAR
-          Hedera actually charges.
-        </p>
-        <div className="grid-2 gap">
-          <label>
-            Amount, HBAR
-            <input
-              value={amount}
-              inputMode="decimal"
-              onChange={(event) => setAmount(event.target.value)}
-            />
-          </label>
-          <label>
-            Due in minutes
-            <input
-              value={minutes}
-              inputMode="numeric"
-              onChange={(event) => setMinutes(event.target.value)}
-            />
-          </label>
-        </div>
-        <div className="grid-2 gap">
-          <label>
-            Min USD
-            <input
-              value={min}
-              inputMode="decimal"
-              onChange={(event) => setMin(event.target.value)}
-            />
-          </label>
-          <label>
-            Max USD
-            <input
-              value={max}
-              inputMode="decimal"
-              onChange={(event) => setMax(event.target.value)}
-            />
-          </label>
-        </div>
-        {decision ? (
-          <p className={decision.ok ? "verdict ok" : "verdict bad"}>
-            {decision.ok
-              ? `At the due time, the current price would pay from ${decision.source} at ${decision.price.toFixed(4)} USD.`
-              : `At the due time, release would revert. ${decision.detail}`}
-          </p>
-        ) : null}
-        <div className="actions">
-          <button
-            type="button"
-            className="primary"
-            disabled={Boolean(busy)}
-            onClick={() => run("fund", onFund)}
-          >
-            {busy === "fund" ? "Waiting for the wallet…" : "Fund this band"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMin("0.05");
-              setMax("0.20");
-            }}
-          >
-            Band that pays
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMin("1");
-              setMax("2");
-            }}
-          >
-            Band that refuses
-          </button>
-        </div>
-      </section>
-
-      <details className="section">
-        <summary>Schedule it from the shell instead</summary>
-        <p>
-          An EVM wallet cannot sign a Hedera schedule. That is the path where Hedera fires release
-          with no bot. Do not reuse account 0.0.10015230.
-        </p>
-        <pre className="command">{command}</pre>
-        <button type="button" onClick={() => copy(command)}>
-          {copied === "command" ? "Copied" : "Copy the commands"}
-        </button>
-        {copied === "copy-failed" ? (
-          <p className="stale">Copy failed. Select the block instead.</p>
-        ) : null}
-      </details>
-
-      {desk?.schedules?.length ? (
-        <section className="section">
-          <h2>Already fired on testnet</h2>
-          <div className="schedules">
-            {desk.schedules.map((item) => (
-              <article key={item.id} className="tile">
-                <h2>
-                  <a href={`https://hashscan.io/testnet/schedule/${item.id}`}>{item.id}</a>
-                </h2>
-                <p className={item.result === "SUCCESS" ? "fresh" : "stale"}>
-                  {scheduleLine(item)}
+        </nav>
+        <div className="stage">
+          {view === "lab" && active ? (
+            <div className="split">
+              <ul className="menu">
+                {scenarios.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className={item.id === active.id ? "on" : ""}
+                      onClick={() => setPicked(item.id)}
+                    >
+                      <i className={item.ok ? "dot ok" : "dot bad"} />
+                      <span>{item.title}</span>
+                      <small>{item.kind}</small>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <article className="detail">
+                <p className={active.kind === "simulation" ? "tag sim" : "tag live"}>
+                  {active.kind}
                 </p>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {desk?.books?.map((book) => (
-        <section key={book.id} className="section">
-          <h2>
-            <a href={`https://hashscan.io/testnet/contract/${book.id}`}>{book.id}</a>
-          </h2>
-          {book.plans.map((plan) => (
-            <article key={plan.id} className="plan">
-              <strong>Plan {plan.id}</strong>
-              <div>
-                <div>{plan.amountLabel}</div>
+                <h1>{active.title}</h1>
+                <p className={active.ok ? "verdict ok" : "verdict bad"}>{active.result}</p>
                 <p className="meta">
-                  Band {money(plan.minPrice)}–{money(plan.maxPrice)} USD. {plan.release.detail}
+                  The band is the HBAR price, even when the escrow is an HTS token.
                 </p>
+                <dl className="facts">
+                  <div>
+                    <dt>Test</dt>
+                    <dd>{active.test}</dd>
+                  </div>
+                  <div>
+                    <dt>Code</dt>
+                    <dd>{active.where}</dd>
+                  </div>
+                </dl>
+                <pre className="command">{active.command}</pre>
+                <button type="button" onClick={() => copy(active.command, active.id)}>
+                  {copied === active.id ? "Copied" : "Copy command"}
+                </button>
+              </article>
+            </div>
+          ) : null}
+
+          {view === "chain" ? (
+            <section>
+              <h1>What is on testnet</h1>
+              <p className="lede">
+                Read from the mirror and the two feeds. Nothing here is signed.
+              </p>
+              {error ? <p className="stale">{error}</p> : null}
+              {desk?.books?.map((book) => (
+                <div key={book.id}>
+                  <h2>
+                    <a href={`https://hashscan.io/testnet/contract/${book.id}`}>{book.id}</a>
+                  </h2>
+                  <table className="plans">
+                    <thead>
+                      <tr>
+                        <th>Plan</th>
+                        <th>Escrow</th>
+                        <th>Band</th>
+                        <th>If released now</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {book.plans.map((plan) => (
+                        <tr key={plan.id}>
+                          <td>{plan.id}</td>
+                          <td>{plan.amountLabel}</td>
+                          <td>
+                            {money(plan.minPrice)}–{money(plan.maxPrice)}
+                          </td>
+                          <td>
+                            <span className={pillClass(plan.release.state)}>
+                              {LABELS[plan.release.state] || plan.release.state}
+                            </span>
+                            <span className="meta"> {plan.release.detail}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </section>
+          ) : null}
+
+          {view === "sign" ? (
+            <section>
+              <h1>Sign a check</h1>
+              <p className="lede">
+                Optional. The lab does not need this. A check that should revert is asked of the
+                node and not sent.
+              </p>
+              {mine.length ? (
+                <div className="banner">
+                  <p>Open escrow in plan {mine.join(", ")}.</p>
+                  <button
+                    type="button"
+                    disabled={Boolean(busy)}
+                    onClick={() => run("return", onReturn)}
+                  >
+                    {busy === "return" ? "Returning…" : "Return escrow"}
+                  </button>
+                </div>
+              ) : null}
+              <div className="cards">
+                <article className="card">
+                  <h2>Pay</h2>
+                  <p>0.1 HBAR, band $0.05–$0.20, then release.</p>
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={Boolean(busy)}
+                    onClick={() => run("pay", onPay)}
+                  >
+                    {busy === "pay" ? "Waiting…" : "Run pay"}
+                  </button>
+                </article>
+                <article className="card">
+                  <h2>Refuse</h2>
+                  <p>Band $1–$2. The node must return OutsideBand. No red transaction.</p>
+                  <button
+                    type="button"
+                    disabled={Boolean(busy)}
+                    onClick={() => run("refuse", onRefuse)}
+                  >
+                    {busy === "refuse" ? "Waiting…" : "Run refuse"}
+                  </button>
+                </article>
+                <article className="card">
+                  <h2>Too early</h2>
+                  <p>Due in an hour. The blocked release is not broadcast.</p>
+                  <button
+                    type="button"
+                    disabled={Boolean(busy)}
+                    onClick={() => run("early", onEarly)}
+                  >
+                    {busy === "early" ? "Waiting…" : "Run too early"}
+                  </button>
+                </article>
               </div>
-              <span className={pillClass(plan.release.state)}>
-                {LABELS[plan.release.state] || plan.release.state}
-              </span>
-            </article>
-          ))}
-        </section>
-      ))}
+              {activity.length ? (
+                <ul className="activity">
+                  {activity.map((item) => (
+                    <li key={item.key}>
+                      <strong>{item.title}</strong>
+                      <span>
+                        {item.detail}{" "}
+                        {item.href ? (
+                          <a href={item.href} target="_blank" rel="noreferrer">
+                            Hashscan
+                          </a>
+                        ) : null}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <h2>Your own band</h2>
+              <p className="meta">
+                This only escrows. The wallet max fee can look larger than the charge.
+              </p>
+              <div className="grid-2 gap">
+                <label>
+                  Amount, HBAR
+                  <input
+                    value={amount}
+                    inputMode="decimal"
+                    onChange={(event) => setAmount(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Due in minutes
+                  <input
+                    value={minutes}
+                    inputMode="numeric"
+                    onChange={(event) => setMinutes(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Min USD
+                  <input
+                    value={min}
+                    inputMode="decimal"
+                    onChange={(event) => setMin(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Max USD
+                  <input
+                    value={max}
+                    inputMode="decimal"
+                    onChange={(event) => setMax(event.target.value)}
+                  />
+                </label>
+              </div>
+              {decision ? (
+                <p className={decision.ok ? "verdict ok" : "verdict bad"}>
+                  {decision.ok
+                    ? `Would pay from ${decision.source} at ${decision.price.toFixed(4)} USD.`
+                    : `Would revert. ${decision.detail}`}
+                </p>
+              ) : null}
+              <div className="actions">
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={Boolean(busy)}
+                  onClick={() => run("fund", onFund)}
+                >
+                  {busy === "fund" ? "Waiting…" : "Fund this band"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMin("0.05");
+                    setMax("0.20");
+                  }}
+                >
+                  Band that pays
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMin("1");
+                    setMax("2");
+                  }}
+                >
+                  Band that refuses
+                </button>
+              </div>
+            </section>
+          ) : null}
+
+          {view === "schedule" ? (
+            <section>
+              <h1>One attempt</h1>
+              <p className="lede">
+                Hedera calls release once. A revert leaves the escrow until cancel, or until a new
+                schedule for the same plan. An EVM wallet cannot sign that schedule. Do not reuse
+                0.0.10015230.
+              </p>
+              <pre className="command">{command}</pre>
+              <button type="button" onClick={() => copy(command, "shell")}>
+                {copied === "shell" ? "Copied" : "Copy the commands"}
+              </button>
+              {copied === "copy-failed" ? (
+                <p className="stale">Copy failed. Select the block instead.</p>
+              ) : null}
+              <div className="cards">
+                <article className="card">
+                  <h2>Paid</h2>
+                  <p>Hedera executed release.</p>
+                  <a href="https://hashscan.io/testnet/schedule/0.0.10820928">0.0.10820928</a>
+                </article>
+                <article className="card">
+                  <h2>Refused</h2>
+                  <p>OutsideBand. The escrow stayed.</p>
+                  <a href="https://hashscan.io/testnet/schedule/0.0.10830733">0.0.10830733</a>
+                </article>
+                <article className="card">
+                  <h2>HTS</h2>
+                  <p>Associated, funded, cancelled. Not scheduled.</p>
+                  <a href="https://hashscan.io/testnet/contract/0.0.10823213">0.0.10823213</a>
+                </article>
+              </div>
+              {desk?.schedules?.length ? (
+                <ul className="activity">
+                  {desk.schedules.map((item) => (
+                    <li key={item.id}>
+                      <strong>
+                        <a href={`https://hashscan.io/testnet/schedule/${item.id}`}>{item.id}</a>
+                      </strong>
+                      <span>{scheduleLine(item)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+          ) : null}
+        </div>
+      </div>
     </main>
   );
 }
