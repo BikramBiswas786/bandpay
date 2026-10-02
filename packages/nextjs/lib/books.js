@@ -5,7 +5,7 @@ const PROOF = [
   {
     id: "0.0.10820921",
     address: "0x87aca0b7ad05e10f7ce953827d9a8b3a8231d9b2",
-    note: "HBAR. Schedule 0.0.10820928 paid plan 1. Schedule 0.0.10830733 called release on plan 3 and reverted. Plan 2 is still open.",
+    note: "HBAR. Schedule 0.0.10820928 paid plan 1. Schedule 0.0.10830733 called release on plan 3 and reverted. Schedule 0.0.10832843 was created by the schedule precompile and paid plan 2.",
   },
   {
     id: "0.0.10823213",
@@ -35,6 +35,10 @@ const SCHEDULES = [
   {
     id: "0.0.10832633",
     transactionId: "0.0.10015230-1790979096-883320387",
+  },
+  {
+    id: "0.0.10832843",
+    transactionId: "0.0.7314364-1790980118-485142054",
   },
 ];
 

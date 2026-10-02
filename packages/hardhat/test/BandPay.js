@@ -292,4 +292,17 @@ describe("BandPay", function () {
     );
     await expect(band.release(0)).to.be.revertedWithCustomError(band, "NoPool");
   });
+
+  it("asks the schedule precompile, which a local chain does not have", async function () {
+    const { recipient, stranger, band } = await setup();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await band.fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now + 3600, {
+      value: ethers.parseEther("1"),
+    });
+    await expect(band.connect(stranger).scheduleRelease(0)).to.be.revertedWithCustomError(
+      band,
+      "NotPayer",
+    );
+    await expect(band.scheduleRelease(0)).to.be.revertedWithCustomError(band, "ScheduleFailed");
+  });
 });

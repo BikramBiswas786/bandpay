@@ -5,6 +5,7 @@
 const { readFeeds } = require("./feeds");
 const { explain, readPlans } = require("./plans");
 const { loadBooks } = require("./books");
+const { mainnetPool } = require("./check-mainnet");
 
 async function main() {
   const rpc = process.env.HEDERA_RPC_URL || "https://testnet.hashio.io/api";
@@ -23,6 +24,11 @@ async function main() {
       console.log(`  plan ${plan.id}  ${plan.amountLabel}  ${release.state}  ${release.detail}`);
     }
   }
+  const mainnet = await mainnetPool();
+  console.log(
+    `Mainnet SaucerSwap ${mainnet.poolUsd}  Chainlink ${mainnet.oracleUsd}  ${mainnet.bps} bps  ${mainnet.ok ? "would pay" : "PoolOff"}`,
+  );
+  if (!mainnet.ok) process.exit(1);
 }
 
 main().catch((error) => {

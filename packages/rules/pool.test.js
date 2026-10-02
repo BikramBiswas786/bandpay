@@ -13,3 +13,11 @@ test("a pool at twice the oracle is refused", () => {
   assert.equal(gap.ok, false);
   assert.equal(gap.bps, 10000);
 });
+
+test("the 2 Oct 2026 mainnet quote was inside the band", () => {
+  // 1 HBAR -> 100419 USDC base units, Chainlink 0.10098840. Re-read with npm run check:mainnet.
+  const price = poolPrice8(100419n, 100_000_000n);
+  const gap = poolAgrees(price, 10098840n);
+  assert.equal(gap.bps, 56);
+  assert.equal(gap.ok, true);
+});

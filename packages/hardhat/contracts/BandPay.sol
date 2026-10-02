@@ -20,6 +20,17 @@ interface ISupraSValueFeed {
     function getSvalue(uint256 pairIndex) external view returns (PriceFeed memory);
 }
 
+interface IHederaScheduleService {
+    function scheduleCallWithPayer(
+        address to,
+        address payer,
+        uint256 expirySecond,
+        uint256 gasLimit,
+        uint64 value,
+        bytes memory callData
+    ) external returns (int64 responseCode, address scheduleAddress);
+}
+
 interface IHederaTokenService {
     function associateToken(address account, address token) external returns (int64 responseCode);
 }
@@ -77,6 +88,7 @@ contract BandPay {
     error AssociateFailed(int64 code);
     error NoPool();
     error PoolOff(uint256 poolPrice, uint256 oraclePrice);
+    error ScheduleFailed(int64 code);
 
     event Funded(
         uint256 indexed id,
@@ -96,6 +108,7 @@ contract BandPay {
     /// @dev Hedera response code SUCCESS. Anything else means the token was not associated.
     int64 internal constant HTS_SUCCESS = 22;
     address internal constant HTS = address(uint160(0x167));
+    address internal constant HSS = address(uint160(0x16b));
 
     /// @dev router, whbar and usdc may be zero. A dollar invoice then reverts NoPool.
     ///      USDC is 6 decimals. The pool price is quote * 1e10 / hbarIn, in the same 8 decimals as the oracles.
@@ -178,6 +191,32 @@ contract BandPay {
         if (amount == 0 || token == address(0)) revert ZeroAmount();
         if (!IERC20(token).transferFrom(msg.sender, address(this), amount)) revert TransferFailed();
         id = _open(msg.sender, recipient, token, amount, minPrice, maxPrice, executeAt, 0);
+    }
+
+    /// @notice The payer asks the Schedule Service system contract to call release at executeAt.
+    ///         The payer must still sign the schedule. The testnet proof of this call is ScheduleProbe
+    ///         0.0.10832802, which paid plan 2 of 0.0.10820921. This function was not on that deployment.
+    function scheduleRelease(uint256 id) external returns (address schedule) {
+        Plan storage plan = plans[id];
+        if (!plan.funded || plan.paid || plan.cancelled) revert BadState();
+        if (msg.sender != plan.payer) revert NotPayer();
+        if (block.timestamp >= plan.executeAt) revert BadState();
+        bytes memory callData = abi.encodeWithSignature("release(uint256)", id);
+        (bool ok, bytes memory data) = HSS.call(
+            abi.encodeWithSelector(
+                IHederaScheduleService.scheduleCallWithPayer.selector,
+                address(this),
+                plan.payer,
+                plan.executeAt,
+                uint256(500_000),
+                uint64(0),
+                callData
+            )
+        );
+        if (!ok || data.length < 64) revert ScheduleFailed(-1);
+        int64 code;
+        (code, schedule) = abi.decode(data, (int64, address));
+        if (code != HTS_SUCCESS) revert ScheduleFailed(code);
     }
 
     /// @dev Call this from a Schedule Service transaction signed by the payer.

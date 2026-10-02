@@ -702,6 +702,9 @@ function scheduleLine(item) {
   if (item.id === "0.0.10832633") {
     return "Hedera called release. SaucerSwap was about $2.25 and the oracle was about $0.10. PoolOff. The escrow stayed.";
   }
+  if (item.id === "0.0.10832843") {
+    return "A contract created this schedule through the Schedule Service precompile. The payer signed it. Hedera paid plan 2.";
+  }
   if (item.result === "SUCCESS") return "Hedera paid the escrow.";
   if (item.result === "CONTRACT_REVERT_EXECUTED") {
     return "Hedera called release. The call reverted and the escrow stayed.";
