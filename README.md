@@ -9,7 +9,7 @@ Node 20.18.3 or newer. Git must already have a name and an email. The scaffolder
 ```bash
 git config --global user.name "Your Name"
 git config --global user.email "you@example.com"
-npm create scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
+npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
 ```
 
 That command installs dependencies and selects Hardhat when GitHub returns `template.json`. Do not run `npm install` again. If it asks for Foundry, GitHub did not return the manifest. Run this instead:
