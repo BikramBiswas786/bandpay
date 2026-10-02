@@ -55,11 +55,11 @@ The evidence, all signed by the exposed account above:
 
 | What it proves | Link |
 | --- | --- |
-| Hedera executed a scheduled `release` and the plan was paid | [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928) |
-| Hedera fired `release`, `OutsideBand` reverted, and the escrow stayed | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) |
-| An HTS token was associated, escrowed, and released by a schedule | [schedule 0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) |
-| A dollar invoice asked SaucerSwap. The public testnet pool was about $2.25 and the oracle was about $0.10, so `PoolOff` reverted and the escrow stayed | [schedule 0.0.10832633](https://hashscan.io/testnet/schedule/0.0.10832633) |
-| Anyone can re-read those results from HCS, with no key | [topic 0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) |
+| Hedera executed a scheduled `release` and the plan was paid | [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10820928) |
+| Hedera fired `release`, `OutsideBand` reverted, and the escrow stayed | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10830733) |
+| Hedera executed a scheduled release of an HTS token. Plan 1 was paid 5 BAND. This is not an open question. | [schedule 0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10831792) |
+| A dollar invoice asked SaucerSwap. The public testnet pool was about $2.25 and the oracle was about $0.10, so `PoolOff` reverted and the escrow stayed | [schedule 0.0.10832633](https://hashscan.io/testnet/schedule/0.0.10832633) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10832633) |
+| Anyone can re-read those results from HCS, with no key | [topic 0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10832517/messages?limit=10&order=asc) |
 
 `fundHbarUsd` is the payroll case. The payer escrows HBAR for a dollar invoice. When the schedule fires, `release` uses the checked price, pays that many HBAR, and refunds the rest. If the dollars no longer fit in the escrow, it reverts `Underfunded`. `fundHbarInstallments` splits one escrow into at most 12 plans. `COUNT` and `EVERY_SECONDS` sign one wait-for-expiry schedule per plan. The plan amounts add up to the escrow, and a thirteenth instalment is refused.
 
@@ -214,6 +214,18 @@ node packages/hardhat/scripts/fund.js
 
 `fund.js` prints `planId`. The schedule must expire after `executeAt`. If it does not, `schedule.mjs` exits and signs nothing. It also exits when the live feeds say `release` would revert, unless you set `ALLOW_REVERT=1`. That flag is how the outside-band plan was scheduled on purpose: Hedera still calls `release`, the call reverts, and the escrow stays.
 
+`npm run check` reads those public contracts. It does not create a new schedule. A new schedule needs your own funded ECDSA account and a wait until expiry.
+
+## Dependency audit
+
+`npm audit` on 2 Oct 2026 reported 33 findings (2 critical, 15 high). They are not a BandPay logic bug.
+
+| Finding | Where it sits | Does the deployed desk run it? |
+| --- | --- | --- |
+| `next@14.2.35`, rated critical for a Windows image-optimizer RCE and an AVIF image RCE | Production dependency of `packages/nextjs` | The desk does not use `next/image` or AVIF. Vercel runs Linux. The patched releases are Next 15.5.24 and 16.3.8. This template stays on 14.2.35 rather than take a major upgrade the day before the deadline. |
+| `protobufjs`, rated critical for code generation from a crafted schema | Inside `@hashgraph/sdk`, used by `packages/schedule` | No. `/api/desk` reads the mirror with `fetch`. It does not decode protobuf. |
+| Hardhat, its matchers, ESLint, `postcss`, `glob`, `tmp` | Development tools | No. They are not in the Vercel function. |
+
 ## HTS
 
 `fundToken` moves the token with `transferFrom`. On Hedera that call reverts until the contract is associated, and an ERC-20 `approve` on the token facade also reverts. `fund-token.js` associates when the mirror does not already show the token, then sends `AccountAllowanceApproveTransaction`, then `fundToken`.
@@ -236,7 +248,7 @@ HBAR does not need this step. Use `fund.js` for that.
 
 These links are the proof that Hedera will fire `release`. Every one of them was signed by `0.0.10015230`. Do not reuse that account. Create a new ECDSA account from the portal. The faucet API needs a personal access token, which this repo does not have.
 
-The contracts below were deployed before `Funded`, `Released`, and `Cancelled` existed. The source emits those events. A new deploy emits them on chain. A scheduled HTS release has been shown: schedule [0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) paid plan 1, 5 BAND. Topic [0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) repeats that result, the HBAR payment, and the `OutsideBand` revert.
+The contracts below were deployed before `Funded`, `Released`, and `Cancelled` existed. The source emits those events. A new deploy emits them on chain. Hedera has executed a scheduled HTS release: schedule [0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) paid plan 1, 5 BAND. Topic [0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) repeats that result, the HBAR payment, the `OutsideBand` revert, and the `PoolOff` revert.
 
 Testnet feeds, not secrets:
 
