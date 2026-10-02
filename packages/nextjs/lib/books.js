@@ -12,6 +12,11 @@ const PROOF = [
     address: "0xa0F8f874341C54C89EE9A2178318Cfa504da7705",
     note: "HTS. Schedule 0.0.10831792 paid plan 1, 5 BAND. Plan 0 was cancelled.",
   },
+  {
+    id: "0.0.10832627",
+    address: "0xa5128A765b8b5512a7a0761c897822787689445c",
+    note: "Dollar invoice. Schedule 0.0.10832633 called release and reverted PoolOff. The public testnet pool priced HBAR near $2.25. The oracle was about $0.10. The escrow stayed.",
+  },
 ];
 
 const SCHEDULES = [
@@ -26,6 +31,10 @@ const SCHEDULES = [
   {
     id: "0.0.10831792",
     transactionId: "0.0.10015230-1790976251-653175855",
+  },
+  {
+    id: "0.0.10832633",
+    transactionId: "0.0.10015230-1790979096-883320387",
   },
 ];
 

@@ -629,12 +629,17 @@ export default function Page() {
                   <p>Hedera paid 5 BAND. Plan 1 is paid.</p>
                   <a href="https://hashscan.io/testnet/schedule/0.0.10831792">0.0.10831792</a>
                 </article>
+                <article className="card">
+                  <h2>Pool</h2>
+                  <p>SaucerSwap was $2.25. The oracle was $0.10. PoolOff. The escrow stayed.</p>
+                  <a href="https://hashscan.io/testnet/schedule/0.0.10832633">0.0.10832633</a>
+                </article>
               </div>
               {desk?.topicId ? (
                 <p className="meta">
                   HCS topic{" "}
                   <a href={`https://hashscan.io/testnet/topic/${desk.topicId}`}>{desk.topicId}</a>{" "}
-                  repeats those three results. The contract cannot write the topic itself.
+                  repeats each of those results. The contract cannot write the topic itself.
                 </p>
               ) : null}
               {desk?.receipts?.length ? (
@@ -691,9 +696,15 @@ function commandFor({ amount, min, max, dueSeconds, allowRevert }) {
 
 function scheduleLine(item) {
   if (!item.executed) return "Waiting for Hedera.";
+  if (item.id === "0.0.10830733") {
+    return "Hedera called release. OutsideBand. The escrow stayed.";
+  }
+  if (item.id === "0.0.10832633") {
+    return "Hedera called release. SaucerSwap was about $2.25 and the oracle was about $0.10. PoolOff. The escrow stayed.";
+  }
   if (item.result === "SUCCESS") return "Hedera paid the escrow.";
   if (item.result === "CONTRACT_REVERT_EXECUTED") {
-    return "Hedera called release. The band refused. The escrow stayed.";
+    return "Hedera called release. The call reverted and the escrow stayed.";
   }
   return item.result || "Executed.";
 }
