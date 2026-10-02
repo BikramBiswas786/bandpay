@@ -82,6 +82,7 @@ contract BandPay {
     );
     event Released(uint256 indexed id, int256 price, uint256 payout);
     event Cancelled(uint256 indexed id);
+    event Attempted(uint256 indexed id, bool paid);
 
     /// @dev Hedera response code SUCCESS. Anything else means the token was not associated.
     int64 internal constant HTS_SUCCESS = 22;
@@ -157,10 +158,32 @@ contract BandPay {
     }
 
     /// @dev Call this from a Schedule Service transaction signed by the payer.
+    ///      If it reverts, the schedule is a failed attempt and the escrow stays.
     function release(uint256 id) external {
+        _release(id, true);
+    }
+
+    /// @notice Same payment as release, but a refusal is caught. The schedule transaction succeeds either way.
+    ///         Attempted is emitted for a pay and for a refusal, so the mirror log has both.
+    function attempt(uint256 id) external {
+        if (msg.sender != plans[id].payer) revert NotPayer();
+        try this.releaseFromAttempt(id) {
+            emit Attempted(id, true);
+        } catch {
+            emit Attempted(id, false);
+        }
+    }
+
+    /// @dev Only attempt may call this. The payer was already checked.
+    function releaseFromAttempt(uint256 id) external {
+        if (msg.sender != address(this)) revert NotPayer();
+        _release(id, false);
+    }
+
+    function _release(uint256 id, bool checkPayer) internal {
         Plan storage plan = plans[id];
         if (!plan.funded || plan.paid || plan.cancelled) revert BadState();
-        if (msg.sender != plan.payer) revert NotPayer();
+        if (checkPayer && msg.sender != plan.payer) revert NotPayer();
         if (block.timestamp < plan.executeAt) revert TooEarly();
         int256 price = _price();
         if (price < plan.minPrice || price > plan.maxPrice) revert OutsideBand(price);

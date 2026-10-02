@@ -192,5 +192,31 @@ describe("BandPay", function () {
     expect((await band.plans(1)).amount).to.equal(100_000_000n);
     expect((await band.plans(1)).executeAt).to.equal(BigInt(now) + 3600n);
     await expect(band.release(1)).to.be.revertedWithCustomError(band, "TooEarly");
+    expect((await band.plans(0)).amount + (await band.plans(1)).amount).to.equal(200_000_000n);
+  });
+
+  it("records a refusal without undoing the escrow", async function () {
+    const { recipient, chainlink, supra, band } = await setup();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await chainlink.set(USD(0, 40_000_000), now);
+    await supra.set(USD(0, 40_000_000), now);
+    await band.fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now, {
+      value: ethers.parseEther("1"),
+    });
+    await expect(band.attempt(0)).to.emit(band, "Attempted").withArgs(0, false);
+    expect((await band.plans(0)).paid).to.equal(false);
+    expect(await ethers.provider.getBalance(await band.getAddress())).to.equal(
+      ethers.parseEther("1"),
+    );
+  });
+
+  it("attempt pays when the band allows it", async function () {
+    const { recipient, band } = await setup();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await band.fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now, {
+      value: ethers.parseEther("1"),
+    });
+    await expect(band.attempt(0)).to.emit(band, "Attempted").withArgs(0, true);
+    expect((await band.plans(0)).paid).to.equal(true);
   });
 });

@@ -96,6 +96,30 @@ function labScenarios(live) {
       where: "packages/hardhat/contracts/BandPay.sol release, and packages/schedule/schedule.mjs",
       command: "export DUE_IN_SECONDS=3600\nnode packages/hardhat/scripts/fund.js",
     },
+    {
+      id: "usd",
+      title: "Oracle sets the HBAR",
+      kind: "simulation",
+      result: `A $0.05 invoice at ${chainlinkPrice.toFixed(4)} USD pays ${(0.05 / chainlinkPrice).toFixed(4)} HBAR and refunds the rest of the escrow.`,
+      ok: true,
+      test: "pays a USD amount of HBAR and refunds the rest of the escrow",
+      where: "packages/hardhat/contracts/BandPay.sol fundHbarUsd",
+      command:
+        "export MIN_USD=0.05\nexport MAX_USD=0.20\n# fundHbarUsd pays the dollars, not a fixed HBAR amount",
+    },
+    {
+      id: "series",
+      title: "One escrow, two schedules",
+      kind: "simulation",
+      result:
+        "0.2 HBAR splits into two plans of 0.1. The two amounts add up to the escrow. A thirteenth instalment is refused.",
+      ok: true,
+      test: "splits one escrow into instalments",
+      where:
+        "packages/hardhat/contracts/BandPay.sol fundHbarInstallments, packages/schedule/series.js",
+      command:
+        "export COUNT=2\nexport EVERY_SECONDS=2592000\nnpm run schedule --workspace=@bandpay/schedule",
+    },
   ];
 }
 

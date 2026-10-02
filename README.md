@@ -57,6 +57,10 @@ The evidence, all signed by the exposed account above:
 | Hedera fired `release`, `OutsideBand` reverted, and the escrow stayed | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) |
 | An HTS token was associated, escrowed, and returned. Not released by a schedule | [contract 0.0.10823213](https://hashscan.io/testnet/contract/0.0.10823213) |
 
+`fundHbarUsd` is the payroll case. The payer escrows HBAR for a dollar invoice. When the schedule fires, `release` uses the checked price, pays that many HBAR, and refunds the rest. If the dollars no longer fit in the escrow, it reverts `Underfunded`. `fundHbarInstallments` splits one escrow into at most 12 plans. `COUNT` and `EVERY_SECONDS` sign one wait-for-expiry schedule per plan. The plan amounts add up to the escrow, and a thirteenth instalment is refused.
+
+`release` is the one-shot. If you schedule `attempt` instead, a refusal is caught, the escrow still stays, and `Attempted` is logged either way. There is no HCS precompile, so the contract cannot write the topic itself. After the schedule has a mirror result, `node packages/schedule/receipt.mjs` writes `{template, planId, result, scheduleId}` to `BANDPAY_TOPIC_ID`. That message is capped at 1024 bytes. It is not on testnet yet, because there is no clean account here to create the topic.
+
 ## How a payment moves
 
 A developer who needs a registry starts at Guardian. This repo is the payment Guardian does not ship.
@@ -153,7 +157,7 @@ npm run check
 npm run dev
 ```
 
-`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, the instalment guard, and twelve contract cases. Those cases include `Funded`, `Released`, and `Cancelled`, a USD-sized HBAR payout, and an instalment split.
+`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, the instalment guard, the HCS message guard, and fourteen contract cases. Those cases include `Funded`, `Released`, `Cancelled`, `Attempted`, a USD-sized HBAR payout, and an instalment split.
 
 `npm run lint` is ESLint on the page, solhint on the contracts, and a Prettier check. `npm run format` rewrites the JavaScript. The scaffolder runs that format command after install. The page uses a system font, so `npm run build` does not download a font.
 
