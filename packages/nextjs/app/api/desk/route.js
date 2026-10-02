@@ -17,7 +17,7 @@ export async function GET() {
         plans: plans.map(plan => ({ ...plan, release: explain(plan, feeds, feeds.readAt) })),
       });
     }
-    const scheduleResponse = await fetch(`${MIRROR}/api/v1/schedules/0.0.10820928`);
+    const scheduleResponse = await fetch(`${MIRROR}/api/v1/schedules/0.0.10820928`, { cache: "no-store" });
     const schedule = await scheduleResponse.json();
     return Response.json({
       feeds,

@@ -53,6 +53,7 @@ function encodePair(pair) {
 async function ethCall(rpcUrl, to, data) {
   const response = await fetch(rpcUrl, {
     method: "POST",
+    cache: "no-store",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to, data }, "latest"] }),
   });

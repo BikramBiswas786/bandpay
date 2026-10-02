@@ -17,7 +17,7 @@ One job. A payer escrows HBAR or an HTS facade token. A wait-for-expiry schedule
 - Add a keeper, a fallback price, or a path that pays without a fresh source.
 - Put an operator key in the repo.
 - Turn this into a registry, a pool, or a second product.
-- Replace the live `eth_call`s with a typed-in price. The page is there to show the feed read failing or clearing.
+- Replace the live `eth_call`s with a typed-in price. The page is there to show the feed read failing or clearing. Those calls must stay `cache: "no-store"`. Next.js will otherwise reuse an old `nextId` and the desk will hide new escrows.
 
 ## Copy
 
