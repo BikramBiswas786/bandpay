@@ -675,3 +675,53 @@ details.section summary {
     white-space: pre-wrap;
   }
 }
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 20px;
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.ledger th,
+.ledger td {
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.ledger tr:last-child td {
+  border-bottom: 0;
+}
+
+.ledger th {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+  font-weight: 600;
+  background: #fff;
+}
+
+.ledger td:first-child {
+  font-weight: 600;
+  white-space: nowrap;
+  width: 7.5rem;
+}
+
+.run {
+  margin: 8px 0 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--sheet);
+}
+
+.run summary {
+  cursor: pointer;
+  font-weight: 600;
+}

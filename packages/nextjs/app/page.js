@@ -331,7 +331,7 @@ export default function Page() {
       <p className="status" aria-live="polite">
         {activity[0]
           ? `${activity[0].title}. ${activity[0].detail}`
-          : "No wallet. Hedera already ran five outcomes: paid, outside the band, 5 BAND, pool off, and a precompile schedule."}
+          : "Public testnet record. No wallet. Five scheduled outcomes."}
       </p>
       <div className="frame">
         <nav className="nav">
@@ -602,46 +602,52 @@ export default function Page() {
 
           {view === "schedule" ? (
             <section>
-              <h1>One attempt</h1>
+              <p className="kicker">Testnet record</p>
+              <h1>Hedera executed these payments.</h1>
               <p className="lede">
-                Hedera calls release once. A revert leaves the escrow until cancel, or until a new
-                schedule for the same plan. An EVM wallet cannot sign that schedule. Do not reuse
-                0.0.10015230.
+                You sign one schedule. At expiry Hedera calls release. The call pays only when
+                Chainlink and Supra agree within 3% and the price is inside the band. A revert
+                leaves the escrow where it is.
               </p>
-              <pre className="command">{command}</pre>
-              <button type="button" onClick={() => copy(command, "shell")}>
-                {copied === "shell" ? "Copied" : "Copy the commands"}
-              </button>
-              {copied === "copy-failed" ? (
-                <p className="stale">Copy failed. Select the block instead.</p>
-              ) : null}
-              <div className="cards">
-                <article className="card">
-                  <h2>Paid</h2>
-                  <p>Hedera executed release.</p>
-                  <a href="https://hashscan.io/testnet/schedule/0.0.10820928">0.0.10820928</a>
-                </article>
-                <article className="card">
-                  <h2>Refused</h2>
-                  <p>OutsideBand. The escrow stayed.</p>
-                  <a href="https://hashscan.io/testnet/schedule/0.0.10830733">0.0.10830733</a>
-                </article>
-                <article className="card">
-                  <h2>HTS</h2>
-                  <p>Hedera paid 5 BAND. Plan 1 is paid.</p>
-                  <a href="https://hashscan.io/testnet/schedule/0.0.10831792">0.0.10831792</a>
-                </article>
-                <article className="card">
-                  <h2>Pool</h2>
-                  <p>SaucerSwap was $2.25. The oracle was $0.10. PoolOff. The escrow stayed.</p>
-                  <a href="https://hashscan.io/testnet/schedule/0.0.10832633">0.0.10832633</a>
-                </article>
-              </div>
+              <table className="ledger">
+                <thead>
+                  <tr>
+                    <th>Result</th>
+                    <th>What Hedera did</th>
+                    <th>Record</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {RECORDS.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.result}</td>
+                      <td>{row.detail}</td>
+                      <td>
+                        <a href={`https://hashscan.io/testnet/schedule/${row.id}`}>{row.id}</a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <details className="run">
+                <summary>Run the same payment on your own account</summary>
+                <pre className="command">{command}</pre>
+                <button type="button" onClick={() => copy(command, "shell")}>
+                  {copied === "shell" ? "Copied" : "Copy the commands"}
+                </button>
+                {copied === "copy-failed" ? (
+                  <p className="stale">Copy failed. Select the block instead.</p>
+                ) : null}
+                <p className="meta">
+                  An EVM wallet cannot sign the schedule. Use a funded ECDSA account of your own. Do
+                  not reuse 0.0.10015230.
+                </p>
+              </details>
               {desk?.topicId ? (
                 <p className="meta">
                   HCS topic{" "}
                   <a href={`https://hashscan.io/testnet/topic/${desk.topicId}`}>{desk.topicId}</a>{" "}
-                  repeats each of those results. The contract cannot write the topic itself.
+                  repeats each result. The contract cannot write the topic itself.
                 </p>
               ) : null}
               {desk?.receipts?.length ? (
@@ -675,6 +681,35 @@ export default function Page() {
     </main>
   );
 }
+
+const RECORDS = [
+  {
+    result: "Paid",
+    detail: "Hedera called release. The plan was paid in HBAR.",
+    id: "0.0.10820928",
+  },
+  {
+    result: "Refused",
+    detail: "OutsideBand. The escrow stayed.",
+    id: "0.0.10830733",
+  },
+  {
+    result: "HTS paid",
+    detail: "Hedera paid 5 BAND. Plan 1 is paid.",
+    id: "0.0.10831792",
+  },
+  {
+    result: "Pool off",
+    detail: "SaucerSwap was about $2.25. The oracle was about $0.10. PoolOff. The escrow stayed.",
+    id: "0.0.10832633",
+  },
+  {
+    result: "Precompile",
+    detail:
+      "A contract created the schedule through the Schedule Service. The payer signed. Hedera paid plan 2.",
+    id: "0.0.10832843",
+  },
+];
 
 function hashscan(hash) {
   return hash ? `https://hashscan.io/testnet/transaction/${hash}` : "";

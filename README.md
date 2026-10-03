@@ -1,6 +1,6 @@
 # Bandpay
 
-Schedule one payment. Hedera fires it. It clears only inside your price band.
+Schedule one payment. Hedera fires it. It clears only inside your price band. The rules, the Hedera calls, and the limits are in [docs/rules.md](docs/rules.md).
 
 ## Start here
 
