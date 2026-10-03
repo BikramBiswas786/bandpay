@@ -219,7 +219,7 @@ contract BandPay {
         if (code != HTS_SUCCESS) revert ScheduleFailed(code);
     }
 
-    /// @dev Call this from a Schedule Service transaction signed by the payer.
+    /// @dev The payer may call this directly. This contract may also call it. A third party cannot.
     ///      If it reverts, the schedule is a failed attempt and the escrow stays.
     function release(uint256 id) external {
         _release(id, true);
@@ -245,7 +245,7 @@ contract BandPay {
     function _release(uint256 id, bool checkPayer) internal {
         Plan storage plan = plans[id];
         if (!plan.funded || plan.paid || plan.cancelled) revert BadState();
-        if (checkPayer && msg.sender != plan.payer) revert NotPayer();
+        if (checkPayer && msg.sender != plan.payer && msg.sender != address(this)) revert NotPayer();
         if (block.timestamp < plan.executeAt) revert TooEarly();
         int256 price = _price();
         if (price < plan.minPrice || price > plan.maxPrice) revert OutsideBand(price);

@@ -1,5 +1,6 @@
 const { decide } = require("./decide");
 const { ethCall } = require("./feeds");
+const { poolPrice8, poolAgrees } = require("../../rules/pool");
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 
@@ -25,6 +26,7 @@ function decodePlan(data) {
   const funded = word(data, 7);
   const paid = word(data, 8);
   const cancelled = word(data, 9);
+  const usdWord = word(data, 10);
   if (amount === null || executeAt === null || funded === null) return null;
   const token = addressOf(data, 2);
   return {
@@ -39,6 +41,7 @@ function decodePlan(data) {
     funded: funded === 1n,
     paid: paid === 1n,
     cancelled: cancelled === 1n,
+    usdAmount: usdWord === null ? 0 : Number(usdWord) / 1e8,
   };
 }
 
@@ -47,8 +50,8 @@ function amountLabel(plan) {
   return `${plan.amount} tokens`;
 }
 
-/** What release would do if Hedera sent it at `now`. */
-function explain(plan, feeds, now) {
+/** What release would do if Hedera sent it at `now`. `poolPrice` is the 8-decimal SaucerSwap quote, or null when the contract has no router. */
+function explain(plan, feeds, now, poolPrice) {
   if (!plan.funded) return { state: "empty", detail: "Nothing is escrowed." };
   if (plan.paid) return { state: "paid", detail: "Already paid." };
   if (plan.cancelled)
@@ -66,10 +69,57 @@ function explain(plan, feeds, now) {
     : null;
   const decision = decide({ chainlink, supra, minPrice: plan.minPrice, maxPrice: plan.maxPrice });
   if (!decision.ok) return { state: decision.reason, detail: decision.detail };
+  if (plan.usdAmount > 0) {
+    if (poolPrice == null) {
+      return {
+        state: "band-only",
+        detail: `The band passes from ${decision.source} at ${decision.price.toFixed(6)}. A dollar invoice still asks SaucerSwap.`,
+      };
+    }
+    const oracle8 = BigInt(Math.round(decision.price * 1e8));
+    const verdict = poolAgrees(poolPrice, oracle8);
+    if (!verdict.ok) {
+      return {
+        state: "pool-off",
+        detail: `PoolOff at ${verdict.bps} bps. The band passed from ${decision.source}. The escrow would stay.`,
+      };
+    }
+    return {
+      state: "would-pay",
+      detail: `Would pay from ${decision.source} at ${decision.price.toFixed(6)}. SaucerSwap is ${verdict.bps} bps away.`,
+    };
+  }
   return {
     state: "would-pay",
     detail: `Would pay from ${decision.source} at ${decision.price.toFixed(6)}.`,
   };
+}
+
+function addressWord(addr) {
+  return addr.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+}
+
+/** 8-decimal HBAR price from this contract's SaucerSwap router. Null when it has no router or the call fails. */
+async function readPoolPrice(rpc, band) {
+  try {
+    const router = addressOf(await ethCall(rpc, band, "0xf887ea40"), 0);
+    if (!router || router.toLowerCase() === ZERO) return null;
+    const whbar = addressOf(await ethCall(rpc, band, "0xa74d5086"), 0);
+    const usdc = addressOf(await ethCall(rpc, band, "0x3e413bee"), 0);
+    const data =
+      "0xd06ca61f" +
+      (100_000_000).toString(16).padStart(64, "0") +
+      (64).toString(16).padStart(64, "0") +
+      (2).toString(16).padStart(64, "0") +
+      addressWord(whbar) +
+      addressWord(usdc);
+    const out = await ethCall(rpc, router, data);
+    const usdcOut = word(out, 3);
+    if (usdcOut === null || usdcOut === 0n) return null;
+    return poolPrice8(usdcOut, 100_000_000n);
+  } catch {
+    return null;
+  }
 }
 
 function assertSchedulable(plan, dueUnix) {
@@ -84,7 +134,7 @@ function assertSchedulable(plan, dueUnix) {
 }
 
 /** Price failures Hedera will hit if it calls release while the feeds still look like this. */
-const REVERT_IF_SCHEDULED = new Set(["disagree", "no-price", "outside-band"]);
+const REVERT_IF_SCHEDULED = new Set(["disagree", "no-price", "outside-band", "pool-off"]);
 
 function assertWorthScheduling(explained, allowRevert) {
   if (!explained || !REVERT_IF_SCHEDULED.has(explained.state)) return;
@@ -109,6 +159,7 @@ async function readPlans(rpcUrl, address) {
 module.exports = {
   decodePlan,
   explain,
+  readPoolPrice,
   assertSchedulable,
   assertWorthScheduling,
   readPlans,

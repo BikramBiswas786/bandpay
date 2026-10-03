@@ -305,4 +305,21 @@ describe("BandPay", function () {
     );
     await expect(band.scheduleRelease(0)).to.be.revertedWithCustomError(band, "ScheduleFailed");
   });
+
+  it("lets this contract release an open plan and still rejects a stranger", async function () {
+    const { recipient, stranger, band } = await setup();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await band.fundHbar(recipient.address, USD(0, 5_000_000), USD(0, 20_000_000), now, {
+      value: ethers.parseEther("1"),
+    });
+    await expect(band.connect(stranger).release(0)).to.be.revertedWithCustomError(band, "NotPayer");
+    const self = await band.getAddress();
+    await ethers.provider.send("hardhat_impersonateAccount", [self]);
+    await ethers.provider.send("hardhat_setBalance", [self, "0x1000000000000000000"]);
+    const asContract = await ethers.getSigner(self);
+    await expect(band.connect(asContract).release(0)).to.changeEtherBalance(
+      recipient,
+      ethers.parseEther("1"),
+    );
+  });
 });

@@ -3,7 +3,7 @@
  * Set BANDPAY_CONTRACT_ID=0.0.x to check your deployment instead of the proof contracts.
  */
 const { readFeeds } = require("./feeds");
-const { explain, readPlans } = require("./plans");
+const { explain, readPlans, readPoolPrice } = require("./plans");
 const { loadBooks } = require("./books");
 const { mainnetPool } = require("./check-mainnet");
 
@@ -18,9 +18,10 @@ async function main() {
   for (const book of books) {
     console.log(`${book.id}  ${book.note}`);
     const plans = await readPlans(rpc, book.address);
+    const poolPrice = await readPoolPrice(rpc, book.address);
     if (plans.length === 0) console.log("  no plans");
     for (const plan of plans) {
-      const release = explain(plan, feeds, feeds.readAt);
+      const release = explain(plan, feeds, feeds.readAt, poolPrice);
       console.log(`  plan ${plan.id}  ${plan.amountLabel}  ${release.state}  ${release.detail}`);
     }
   }

@@ -39,7 +39,7 @@ npm run dev
 | `npm run check` | Reads live Chainlink and Supra and prints what `release` would do | No |
 | `npm run dev` | The desk at `http://localhost:3000` | No |
 
-The hosted desk is [bandpay-two.vercel.app](https://bandpay-two.vercel.app). It opens on the three outcomes Hedera already ran: an HBAR payment, an `OutsideBand` revert that left the escrow, and a scheduled payment of 5 BAND. No wallet. The Lab tab is the rule. Its fresh-feed row is the live testnet price. The other rows are simulations. None of them send a transaction.
+The hosted desk is [bandpay-two.vercel.app](https://bandpay-two.vercel.app). It opens on the five outcomes Hedera already ran: an HBAR payment, an `OutsideBand` revert, a scheduled payment of 5 BAND, a `PoolOff` revert, and a schedule the contract created through the Schedule Service precompile. No wallet. The Lab tab is the rule. Its fresh-feed row is the live testnet price. The other rows are simulations. None of them send a transaction.
 
 ### With testnet HBAR
 
@@ -173,7 +173,7 @@ npm run check
 npm run dev
 ```
 
-`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, the instalment guard, the HCS message guard, the pool quote, and seventeen contract cases. Those cases include `Funded`, `Released`, `Cancelled`, `Attempted`, a USD-sized HBAR payout, an instalment split, and the local refusal when the schedule precompile is missing.
+`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, the instalment guard, the HCS message guard, the pool quote, and eighteen contract cases. Those cases include `Funded`, `Released`, `Cancelled`, `Attempted`, a USD-sized HBAR payout, an instalment split, the local refusal when the schedule precompile is missing, and a release sent by the contract itself.
 
 `npm run lint` is ESLint on the page, solhint on the contracts, and a Prettier check. `npm run format` rewrites the JavaScript. The scaffolder runs that format command after install. The page uses a system font, so `npm run build` does not download a font.
 

@@ -25,6 +25,7 @@ const {
   assertWorthScheduling,
   explain,
   readPlans,
+  readPoolPrice,
 } = require("../nextjs/lib/plans.js");
 const net = currentNetwork();
 
@@ -46,6 +47,7 @@ seriesStep(planId, 0, count, every);
 
 const plans = await readPlans(net.rpc, evm);
 const feeds = await readFeeds(net.rpc);
+const poolPrice = await readPoolPrice(net.rpc, evm);
 const allowRevert = process.env.ALLOW_REVERT === "1";
 const key = PrivateKey.fromStringECDSA(operatorKey);
 const client = (net.name === "mainnet" ? Client.forMainnet() : Client.forTestnet()).setOperator(
@@ -58,7 +60,7 @@ for (let index = 0; index < count; index += 1) {
   const plan = plans.find((item) => item.id === step.planId);
   const due = new Date(Date.now() + (dueInSeconds + step.extraSeconds) * 1000);
   assertSchedulable(plan, Math.floor(due.getTime() / 1000));
-  const now = explain(plan, feeds, feeds.readAt);
+  const now = explain(plan, feeds, feeds.readAt, poolPrice);
   assertWorthScheduling(now, allowRevert);
   const release = new ContractExecuteTransaction()
     .setContractId(ContractId.fromString(contractId))

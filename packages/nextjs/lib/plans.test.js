@@ -49,6 +49,26 @@ test("an open plan inside the band would pay, and one outside would not", () => 
   assert.equal(explain({ ...open, minPrice: 1, maxPrice: 2 }, feeds, 1_000).state, "outside-band");
 });
 
+test("a dollar invoice names PoolOff when SaucerSwap is far from the oracle", () => {
+  const feeds = {
+    maxAge: 3600,
+    chainlink: { price: 0.1, ageSec: 30, fresh: true },
+    supra: { price: 0.101, ageSec: 30, fresh: true },
+  };
+  const invoice = {
+    funded: true,
+    paid: false,
+    cancelled: false,
+    executeAt: 1_000,
+    minPrice: 0.05,
+    maxPrice: 0.2,
+    usdAmount: 0.01,
+  };
+  assert.equal(explain(invoice, feeds, 1_000, 20_000_000n).state, "pool-off");
+  assert.equal(explain(invoice, feeds, 1_000, 10_000_000n).state, "would-pay");
+  assert.equal(explain(invoice, feeds, 1_000, null).state, "band-only");
+});
+
 test("refuses to schedule a revert unless ALLOW_REVERT is set", () => {
   const outside = { state: "outside-band", detail: "Outside the band." };
   assert.throws(() => assertWorthScheduling(outside, false), /ALLOW_REVERT=1/);

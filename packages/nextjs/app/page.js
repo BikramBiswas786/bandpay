@@ -29,6 +29,8 @@ const LABELS = {
   "too-early": "Too early",
   disagree: "Disagree",
   "no-price": "No price",
+  "pool-off": "Pool off",
+  "band-only": "Band only",
   empty: "Empty",
 };
 
@@ -719,6 +721,12 @@ function money(value) {
 
 function pillClass(state) {
   if (state === "paid" || state === "would-pay") return "pill ok";
-  if (state === "outside-band" || state === "disagree" || state === "no-price") return "pill bad";
+  if (
+    state === "outside-band" ||
+    state === "disagree" ||
+    state === "no-price" ||
+    state === "pool-off"
+  )
+    return "pill bad";
   return "pill";
 }

@@ -1,5 +1,5 @@
 import { readFeeds } from "../../../lib/feeds";
-import { explain, readPlans } from "../../../lib/plans";
+import { explain, readPlans, readPoolPrice } from "../../../lib/plans";
 import { MIRROR, SCHEDULES, TOPIC_ID, loadBooks } from "../../../lib/books";
 import { decodeReceiptMessage } from "../../../lib/receipts";
 
@@ -51,9 +51,13 @@ export async function GET() {
     const books = [];
     for (const book of await loadBooks()) {
       const plans = await readPlans(RPC, book.address);
+      const poolPrice = await readPoolPrice(RPC, book.address);
       books.push({
         ...book,
-        plans: plans.map((plan) => ({ ...plan, release: explain(plan, feeds, feeds.readAt) })),
+        plans: plans.map((plan) => ({
+          ...plan,
+          release: explain(plan, feeds, feeds.readAt, poolPrice),
+        })),
       });
     }
     const schedules = [];
