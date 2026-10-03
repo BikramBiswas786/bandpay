@@ -10,6 +10,12 @@ npm run demo
 
 That first line is the command the bounty asks for. It fetches this repo, reads `template.json`, and installs Hardhat. The directory name is `my-hedera-dapp` when you do not pass one. `npm run demo` needs no Hedera account. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays. `ScheduleFailed` is the local chain: it has no Schedule Service. On testnet, Hedera fires the call. The rules are in [docs/rules.md](docs/rules.md).
 
+## Video
+
+Two minutes and four seconds. Under the five-minute limit. The cards are the `npm run demo` results and the five testnet schedules. Not a desktop capture.
+
+[Watch the demo](docs/demo/BandPay-demo.mp4)
+
 ## Already available
 
 Use the other tool when it is the job.
