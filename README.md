@@ -2,6 +2,17 @@
 
 Schedule one payment. Hedera fires it. It clears only inside your price band. The rules, the Hedera calls, and the limits are in [docs/rules.md](docs/rules.md).
 
+## Already available
+
+Use the other tool when it is the job.
+
+| You need | Use |
+| --- | --- |
+| A transfer, a token, a topic, or a scheduled transfer with no price check | The [Hedera portal](https://portal.hedera.com) and the SDK. No contract. |
+| A vault that Hedera ticks, with a pluggable strategy | [`payments-scheduler`](https://github.com/hedera-dev/scaffold-hbar/tree/templates/payments-scheduler). Local tests mock the schedule service. |
+| A page that reads Chainlink, Pyth, or Supra | [`oracles`](https://github.com/hedera-dev/scaffold-hbar/tree/templates/oracles). It does not refuse a payment. |
+| A payment Hedera fires, that reverts unless two HBAR feeds agree and the price is inside the band | This template. The escrow stays on `OutsideBand`, `FeedsDisagree`, `NoPrice`, and `PoolOff`. |
+
 ## Start here
 
 Node 20.18.3 or newer. Git must already have a name and an email. The scaffolder makes the first commit, and it stops if those are empty.
