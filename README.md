@@ -66,7 +66,11 @@ The same five results are on [HCS topic 0.0.10832517](https://hashscan.io/testne
 
 ## Video
 
-42 seconds. Silent. It is the real `npm run demo`, then the real `npx hardhat test`: 18 passing. No voice. The demo pays 0.1 HBAR, then prints `OutsideBand`, `Disagree`, `NoPrice`, `PoolOff`, and `ScheduleFailed`.
+Two minutes and 52 seconds. Under the five-minute limit. It is the three checks, in order: the one scaffold command, `npm run demo`, then the five testnet schedules. No Hedera account for the first two.
+
+[Watch the walkthrough](docs/demo/BandPay-for-developers.mp4)
+
+The 42-second clip is the commands themselves, silent: `npm run demo`, then 18 Hardhat tests. The demo pays 0.1 HBAR, then prints `OutsideBand`, `Disagree`, `NoPrice`, `PoolOff`, and `ScheduleFailed`.
 
 [Watch the run](docs/demo/BandPay-demo.mp4)
 
@@ -79,7 +83,7 @@ Use the other tool when it is the job.
 | A transfer, a token, a topic, or a scheduled transfer with no price check | The [Hedera portal](https://portal.hedera.com) and the SDK. No contract. |
 | A vault that Hedera ticks, with a pluggable strategy | [`payments-scheduler`](https://github.com/hedera-dev/scaffold-hbar/tree/templates/payments-scheduler). Local tests mock the schedule service. |
 | A page that reads Chainlink, Pyth, or Supra | [`oracles`](https://github.com/hedera-dev/scaffold-hbar/tree/templates/oracles). It does not refuse a payment. |
-| A payment Hedera fires, that reverts unless two HBAR feeds agree and the price is inside the band | This template. The escrow stays on `OutsideBand`, `FeedsDisagree`, `NoPrice`, and `PoolOff`. |
+| A payment Hedera fires, that reverts unless two HBAR feeds agree and the price is inside the band | This template. The escrow stays on `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. |
 
 ## What the template does
 

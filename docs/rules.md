@@ -19,7 +19,7 @@ Both reads are the HBAR price. Chainlink is HBAR/USD. Supra pair 75 is HBAR/USDT
 
 | Check | Revert | The escrow |
 | --- | --- | --- |
-| The two fresh prices differ by more than 3% | `FeedsDisagree` | Stays |
+| The two fresh prices differ by more than 3% | `Disagree` | Stays |
 | Neither feed is fresh | `NoPrice` | Stays |
 | The price is outside the band | `OutsideBand` | Stays |
 | A dollar invoice and the SaucerSwap quote differ by more than 3% | `PoolOff` | Stays |
