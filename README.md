@@ -3,10 +3,12 @@
 Schedule one payment. Hedera fires it. It clears only inside your price band.
 
 ```bash
+npm create scaffold-hbar@latest -- --template BikramBiswas786/bandpay
+cd my-hedera-dapp
 npm run demo
 ```
 
-No Hedera account. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays on each of those. `ScheduleFailed` is the local chain: it has no Schedule Service. On testnet, Hedera fires the call. The rules are in [docs/rules.md](docs/rules.md).
+That first line is the command the bounty asks for. It fetches this repo, reads `template.json`, and installs Hardhat. The directory name is `my-hedera-dapp` when you do not pass one. `npm run demo` needs no Hedera account. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays. `ScheduleFailed` is the local chain: it has no Schedule Service. On testnet, Hedera fires the call. The rules are in [docs/rules.md](docs/rules.md).
 
 ## Already available
 
@@ -21,20 +23,27 @@ Use the other tool when it is the job.
 
 ## Start here
 
-Node 20.18.3 or newer. Git must already have a name and an email. The scaffolder makes the first commit, and it stops if those are empty.
+The command at the top is the whole install. Node 20.18.3 or newer. Git must already have a name and an email, or the scaffolder stops before the first commit.
 
 ```bash
 git config --global user.name "Your Name"
 git config --global user.email "you@example.com"
-npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
+npm create scaffold-hbar@latest -- --template BikramBiswas786/bandpay
+cd my-hedera-dapp
+npm run demo
 ```
 
-The bounty one-liner without a project name creates `my-hedera-dapp` instead of `my-pay`. Use that directory name in the commands below.
-
-That command installs dependencies and selects Hardhat when GitHub returns `template.json`. Do not run `npm install` again. If it asks for Foundry, GitHub did not return the manifest. Run this instead:
+To choose the directory name, put it before `--`:
 
 ```bash
-npx create-scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay --solidity-framework hardhat --package-manager npm
+npm create scaffold-hbar@latest -- my-pay -- --template BikramBiswas786/bandpay
+cd my-pay
+```
+
+Do not run `npm install` again. If it asks for Foundry, GitHub did not return `template.json`. Run this instead:
+
+```bash
+npm create scaffold-hbar@latest -- my-pay -- --template BikramBiswas786/bandpay --solidity-framework hardhat --package-manager npm
 ```
 
 ### No key
