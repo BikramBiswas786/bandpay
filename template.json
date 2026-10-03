@@ -20,6 +20,7 @@
         {
           "title": "First run",
           "steps": [
+            { "label": "See a payment and the reverts, no account", "command": "npm run demo" },
             { "label": "Test the price gate", "command": "npm test" },
             { "label": "Open the rule page", "command": "npm run dev" },
             { "text": "A testnet schedule needs a funded account. Do not commit the key. See README." }
