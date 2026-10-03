@@ -378,8 +378,8 @@ export default function Page() {
                 ))}
               </ul>
               <article className="detail">
-                <p className={active.kind === "simulation" ? "tag sim" : "tag live"}>
-                  {active.kind}
+                <p className={active.proof === "testnet-proven" ? "tag live" : "tag sim"}>
+                  {active.proof || active.kind}
                 </p>
                 <h1>{active.title}</h1>
                 <p className={active.ok ? "verdict ok" : "verdict bad"} aria-live="polite">

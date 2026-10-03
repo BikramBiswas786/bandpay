@@ -72,19 +72,37 @@ async function main() {
     process.env.RECIPIENT && process.env.RECIPIENT.startsWith("0x")
       ? process.env.RECIPIENT
       : wallet.address;
-  const tx = usd
-    ? await band.fundHbarUsd(recipient, usd, minPrice, maxPrice, executeAt, {
-        type: 0,
-        gasPrice,
-        gasLimit: 1_000_000n,
-        value,
-      })
-    : await band.fundHbar(recipient, minPrice, maxPrice, executeAt, {
-        type: 0,
-        gasPrice,
-        gasLimit: 1_000_000n,
-        value,
-      });
+  const count = Number(process.env.COUNT || "0");
+  const every = Number(process.env.EVERY_SECONDS || "0");
+  let tx;
+  if (count > 1) {
+    if (usdAmount) throw new Error("Installments are an HBAR split. Do not set USD_AMOUNT.");
+    if (!Number.isInteger(count) || count > 12) throw new Error("COUNT must be 2 to 12.");
+    if (!Number.isInteger(every) || every <= 0)
+      throw new Error("EVERY_SECONDS is required when COUNT is more than 1.");
+    if (value % BigInt(count) !== 0n)
+      throw new Error("The escrow must divide evenly across COUNT.");
+    tx = await band.fundHbarInstallments(recipient, count, every, minPrice, maxPrice, executeAt, {
+      type: 0,
+      gasPrice,
+      gasLimit: 2_000_000n,
+      value,
+    });
+  } else {
+    tx = usd
+      ? await band.fundHbarUsd(recipient, usd, minPrice, maxPrice, executeAt, {
+          type: 0,
+          gasPrice,
+          gasLimit: 1_000_000n,
+          value,
+        })
+      : await band.fundHbar(recipient, minPrice, maxPrice, executeAt, {
+          type: 0,
+          gasPrice,
+          gasLimit: 1_000_000n,
+          value,
+        });
+  }
   const receipt = await tx.wait();
   console.log(
     JSON.stringify({

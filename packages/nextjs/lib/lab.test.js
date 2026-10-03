@@ -50,3 +50,22 @@ test("an early schedule is named TooEarly and is not a price result", () => {
   assert.match(row.result, /TooEarly/);
   assert.equal(row.kind, "simulation");
 });
+
+test("new payment rows are runnable and are not claimed as testnet proofs", () => {
+  const rows = labScenarios(live);
+  const usd = rows.find((item) => item.id === "usd");
+  const series = rows.find((item) => item.id === "series");
+  const attempt = rows.find((item) => item.id === "attempt");
+  const receipt = rows.find((item) => item.id === "receipt");
+  for (const row of [usd, series, attempt, receipt]) {
+    assert.equal(row.proof, "local simulation");
+    assert.doesNotMatch(row.command, /#/);
+  }
+  assert.match(usd.command, /USD_AMOUNT=0\.05/);
+  assert.match(usd.command, /fund\.js/);
+  assert.match(series.command, /COUNT=2/);
+  assert.match(series.command, /fund\.js/);
+  assert.match(attempt.command, /records a refusal/);
+  assert.match(receipt.command, /receipt\.mjs/);
+  assert.match(receipt.result, /cannot write the topic/);
+});

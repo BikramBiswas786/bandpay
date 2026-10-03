@@ -65,6 +65,7 @@ function labScenarios(live) {
       where: "packages/hardhat/contracts/BandPay.sol release and _price",
       command:
         "export MIN_USD=0.05\nexport MAX_USD=0.20\nexport DUE_IN_SECONDS=90\nnode packages/hardhat/scripts/fund.js",
+      proof: "testnet-proven",
     },
     {
       id: "stale",
@@ -75,6 +76,7 @@ function labScenarios(live) {
       test: "uses Supra when Chainlink is stale",
       where: "packages/hardhat/contracts/BandPay.sol _chainlink and _price",
       command: "export MIN_USD=0.05\nexport MAX_USD=0.20\nnode packages/hardhat/scripts/fund.js",
+      proof: "local simulation",
     },
     {
       id: "disagree",
@@ -86,6 +88,7 @@ function labScenarios(live) {
       where: "packages/hardhat/contracts/BandPay.sol _price",
       command:
         "export MIN_USD=0.05\nexport MAX_USD=1\nexport ALLOW_REVERT=1\nnpm run schedule --workspace=@bandpay/schedule",
+      proof: "local simulation",
     },
     {
       id: "outside",
@@ -97,6 +100,7 @@ function labScenarios(live) {
       where: "packages/hardhat/contracts/BandPay.sol release",
       command:
         "export MIN_USD=1\nexport MAX_USD=2\nexport ALLOW_REVERT=1\nnpm run schedule --workspace=@bandpay/schedule",
+      proof: "testnet-proven",
     },
     {
       id: "early",
@@ -108,42 +112,71 @@ function labScenarios(live) {
       test: "rejects a stranger and an early call",
       where: "packages/hardhat/contracts/BandPay.sol release, and packages/schedule/schedule.mjs",
       command: "export DUE_IN_SECONDS=3600\nnode packages/hardhat/scripts/fund.js",
+      proof: "local simulation",
     },
     {
       id: "usd",
       title: "Oracle sets the HBAR",
       kind: "simulation",
-      result: `A $0.05 invoice at ${chainlinkPrice.toFixed(4)} USD pays ${(0.05 / chainlinkPrice).toFixed(4)} HBAR and refunds the rest of the escrow.`,
+      result: `A $0.05 invoice at ${chainlinkPrice.toFixed(4)} USD pays ${(0.05 / chainlinkPrice).toFixed(4)} HBAR and refunds the rest of the escrow. Local test only. No testnet schedule proves fundHbarUsd yet.`,
       ok: true,
       test: "pays a USD amount of HBAR and refunds the rest of the escrow",
       where: "packages/hardhat/contracts/BandPay.sol fundHbarUsd",
       command:
-        "export MIN_USD=0.05\nexport MAX_USD=0.20\n# fundHbarUsd pays the dollars, not a fixed HBAR amount",
+        "export USD_AMOUNT=0.05\nexport MIN_USD=0.05\nexport MAX_USD=0.20\nexport DUE_IN_SECONDS=90\nnode packages/hardhat/scripts/fund.js",
+      proof: "local simulation",
     },
     {
       id: "series",
       title: "One escrow, two schedules",
       kind: "simulation",
       result:
-        "0.2 HBAR splits into two plans of 0.1. The two amounts add up to the escrow. A thirteenth instalment is refused.",
+        "0.2 HBAR splits into two plans of 0.1. The two amounts add up to the escrow. A thirteenth instalment is refused. Local test only.",
       ok: true,
       test: "splits one escrow into instalments",
       where:
         "packages/hardhat/contracts/BandPay.sol fundHbarInstallments, packages/schedule/series.js",
       command:
-        "export COUNT=2\nexport EVERY_SECONDS=2592000\nnpm run schedule --workspace=@bandpay/schedule",
+        "export COUNT=2\nexport EVERY_SECONDS=2592000\nexport AMOUNT_HBAR=0.2\nexport MIN_USD=0.05\nexport MAX_USD=0.20\nexport DUE_IN_SECONDS=90\nnode packages/hardhat/scripts/fund.js",
+      proof: "local simulation",
     },
     {
       id: "pool",
       title: "SaucerSwap is off the oracle",
       kind: "simulation",
       result:
-        "A pool at twice the oracle is 10000 bps off. The limit is 300. The dollar invoice does not pay. An HBAR band with no dollar amount does not ask the pool.",
+        "A pool at twice the oracle is 10000 bps off. The limit is 300. The dollar invoice does not pay. Schedule 0.0.10832633 is the testnet revert. An HBAR band with no dollar amount does not ask the pool.",
       ok: false,
       test: "refuses a dollar invoice when SaucerSwap is more than 3% off the oracle",
       where: "packages/hardhat/contracts/BandPay.sol _requirePool",
+      command: "npm run demo --workspace=@bandpay/hardhat",
+      proof: "testnet-proven",
+    },
+    {
+      id: "attempt",
+      title: "The call succeeds and the payment does not",
+      kind: "simulation",
+      result:
+        "attempt catches OutsideBand, Disagree, NoPrice, TooEarly, and Underfunded. The transaction status is success. The Attempted event says paid is false and carries the revert bytes. The escrow stays. Local test only.",
+      ok: false,
+      test: "records a refusal without undoing the escrow",
+      where: "packages/hardhat/contracts/BandPay.sol attempt",
       command:
-        "export USD_AMOUNT=0.05\nexport MIN_USD=0.05\nexport MAX_USD=0.20\n# mainnet router is SaucerSwap V1 0.0.3045981",
+        'npm test --workspace=@bandpay/hardhat -- --grep "records a refusal without undoing the escrow"',
+      proof: "local simulation",
+    },
+    {
+      id: "receipt",
+      title: "The HCS note is written after the mirror",
+      kind: "simulation",
+      result:
+        "The contract cannot write the topic. Read the schedule on the mirror first. Then this script submits {template, planId, result, scheduleId}. Topic 0.0.10832517 already has the five earlier results. A new message is not the same as those five.",
+      ok: true,
+      test: "a reverted attempt fits in one HCS message",
+      where: "packages/schedule/receipt.mjs",
+      command:
+        "export BANDPAY_TOPIC_ID=0.0.YOUR_TOPIC\nexport HEDERA_OPERATOR_ID=0.0.YOUR_ACCOUNT\nexport HEDERA_OPERATOR_KEY=0xYOUR_KEY\nexport PLAN_ID=0\nexport RESULT=reverted\nexport SCHEDULE_ID=0.0.YOUR_SCHEDULE\nnode packages/schedule/receipt.mjs",
+      proof: "local simulation",
     },
   ];
 }
