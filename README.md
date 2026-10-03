@@ -62,6 +62,8 @@ The evidence, all signed by the exposed account above:
 | A contract created the schedule through the Schedule Service precompile at `0x16b`. The payer signed. Hedera paid plan 2 | [schedule 0.0.10832843](https://hashscan.io/testnet/schedule/0.0.10832843) · [create](https://hashscan.io/testnet/transaction/0x0587c4431e13e76392f2932c44fa3f177f4b7c01b46ac11c958223b2c75f9fbd) · [executed call](https://hashscan.io/testnet/transaction/0.0.7314364-1790980118-485142054) |
 | Anyone can re-read those results from HCS, with no key | [topic 0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10832517/messages?limit=10&order=asc) |
 
+Re-read from the mirror on 3 Oct 2026. The mirror link on each row is the record. `npm run check` that day printed `pool-off` for the dollar invoice, not `would-pay`.
+
 `fundHbarUsd` is the payroll case. The payer escrows HBAR for a dollar invoice. When the schedule fires, `release` uses the checked price, pays that many HBAR, and refunds the rest. If the dollars no longer fit in the escrow, it reverts `Underfunded`. `fundHbarInstallments` splits one escrow into at most 12 plans. `COUNT` and `EVERY_SECONDS` sign one wait-for-expiry schedule per plan. The plan amounts add up to the escrow, and a thirteenth instalment is refused.
 
 `release` is the one-shot. If you schedule `attempt` instead, a refusal is caught, the escrow still stays, and `Attempted` is logged either way, with the revert bytes (`OutsideBand`, `NoPrice`, `Disagree`, `TooEarly`, or `Underfunded`). Hashscan shows that schedule as SUCCESS even when nothing was paid. Read the `Attempted` log. The raw `release` revert, on the old contract, is what a red transaction looks like.
@@ -219,13 +221,13 @@ node packages/hardhat/scripts/fund.js
 
 ## Dependency audit
 
-`npm audit` on 2 Oct 2026 reported 33 findings (2 critical, 15 high). They are not a BandPay logic bug.
+`npm audit` on 3 Oct 2026 reported 51 findings (2 critical, 33 high, 2 moderate, 14 low). On 2 Oct the same tree reported 33. The count rose because the advisory database added findings, not because this template added a dependency. `npm audit fix` without `--force` does not clear them. The fixes npm offers are Next 16.3.8 and Hardhat 3, which are major upgrades. This template does not take those the day before the deadline.
 
 | Finding | Where it sits | Does the deployed desk run it? |
 | --- | --- | --- |
-| `next@14.2.35`, rated critical for a Windows image-optimizer RCE and an AVIF image RCE | Production dependency of `packages/nextjs` | The desk does not use `next/image` or AVIF. Vercel runs Linux. The patched releases are Next 15.5.24 and 16.3.8. This template stays on 14.2.35 rather than take a major upgrade the day before the deadline. |
-| `protobufjs`, rated critical for code generation from a crafted schema | Inside `@hashgraph/sdk`, used by `packages/schedule` | No. `/api/desk` reads the mirror with `fetch`. It does not decode protobuf. |
-| Hardhat, its matchers, ESLint, `postcss`, `glob`, `tmp` | Development tools | No. They are not in the Vercel function. |
+| `next@14.2.35`, rated critical. The advisory list includes a Windows image-optimizer RCE, an AVIF image RCE, and several Server Component issues | Production dependency of `packages/nextjs` | The desk does not use `next/image`, AVIF, or React Server Components. Vercel runs Linux. The patched releases are Next 15.5.24 and 16.3.8. |
+| `protobufjs`, rated critical for code generation from a crafted schema | Inside `@hashgraph/sdk`, used by `packages/schedule` | No. `/api/desk` reads the mirror with `fetch`. It does not decode protobuf and it does not generate code from a schema. |
+| Hardhat, `glob`, `postcss`, `solhint`, `tmp`, `undici`, and the React Native tree inside `@hashgraph/sdk` | Development tools, or a dependency the desk does not import | No. They are not in the Vercel function. |
 
 ## HTS
 
