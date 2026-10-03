@@ -1,35 +1,14 @@
-# Bandpay
+![BandPay](docs/images/masthead.png)
 
-Schedule one payment. Hedera fires it. It clears only inside your price band.
+# BandPay
 
-```bash
-npm create scaffold-hbar@latest -- --template BikramBiswas786/bandpay
-cd my-hedera-dapp
-npm run demo
-```
+Hedera will schedule a transfer. An oracle page will show you a price. Neither will hold the money and pay it only when two feeds agree. This template does that one thing.
 
-That first line is the command the bounty asks for. It fetches this repo, reads `template.json`, and installs Hardhat. The directory name is `my-hedera-dapp` when you do not pass one. `npm run demo` needs no Hedera account. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays. `ScheduleFailed` is the local chain: it has no Schedule Service. On testnet, Hedera fires the call. The rules are in [docs/rules.md](docs/rules.md).
+You escrow HBAR, or an HTS token. You sign one schedule. At expiry, Hedera calls `release`. If Chainlink and Supra agree, and the price sits inside your band, the recipient is paid. If they do not, the call reverts and the escrow stays until you cancel it. A dollar invoice also asks SaucerSwap, and reverts `PoolOff` when that pool is more than 3% off the oracle.
 
-## Video
+## 1. One command
 
-Two minutes and four seconds. Under the five-minute limit. The cards are the `npm run demo` results and the five testnet schedules. Not a desktop capture.
-
-[Watch the demo](docs/demo/BandPay-demo.mp4)
-
-## Already available
-
-Use the other tool when it is the job.
-
-| You need | Use |
-| --- | --- |
-| A transfer, a token, a topic, or a scheduled transfer with no price check | The [Hedera portal](https://portal.hedera.com) and the SDK. No contract. |
-| A vault that Hedera ticks, with a pluggable strategy | [`payments-scheduler`](https://github.com/hedera-dev/scaffold-hbar/tree/templates/payments-scheduler). Local tests mock the schedule service. |
-| A page that reads Chainlink, Pyth, or Supra | [`oracles`](https://github.com/hedera-dev/scaffold-hbar/tree/templates/oracles). It does not refuse a payment. |
-| A payment Hedera fires, that reverts unless two HBAR feeds agree and the price is inside the band | This template. The escrow stays on `OutsideBand`, `FeedsDisagree`, `NoPrice`, and `PoolOff`. |
-
-## Start here
-
-The command at the top is the whole install. Node 20.18.3 or newer. Git must already have a name and an email, or the scaffolder stops before the first commit.
+This is the self-check. Git needs a name and an email, or the scaffolder stops before its first commit.
 
 ```bash
 git config --global user.name "Your Name"
@@ -39,26 +18,20 @@ cd my-hedera-dapp
 npm run demo
 ```
 
-To choose the directory name, put it before `--`:
+The first line fetches this repo, reads `template.json`, and installs Hardhat. With no directory name, the folder is `my-hedera-dapp`. To choose one, put it before `--`:
 
 ```bash
 npm create scaffold-hbar@latest -- my-pay -- --template BikramBiswas786/bandpay
 cd my-pay
 ```
 
-Do not run `npm install` again. If it asks for Foundry, GitHub did not return `template.json`. Run this instead:
+Do not run `npm install` again. If it asks for Foundry, GitHub did not return `template.json`. Run the same command with `--solidity-framework hardhat --package-manager npm`.
+
+## 2. A fresh developer, end to end
+
+`npm run demo` needs no account and no network. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays. After `OutsideBand`, the demo also cancels, and the payer is repaid. `ScheduleFailed` is the laptop: it has no Schedule Service. On testnet, Hedera fires the call.
 
 ```bash
-npm create scaffold-hbar@latest -- my-pay -- --template BikramBiswas786/bandpay --solidity-framework hardhat --package-manager npm
-```
-
-### No key
-
-You can run the tests and open the desk before you create an account. The browser never asks for a private key.
-
-```bash
-cd my-pay
-npm run demo
 npm test
 npm run lint
 npm run check
@@ -73,11 +46,40 @@ npm run dev
 | `npm run check` | Reads live Chainlink and Supra and prints what `release` would do | No |
 | `npm run dev` | The desk at `http://localhost:3000` | No |
 
-The hosted desk is [bandpay-two.vercel.app](https://bandpay-two.vercel.app). It opens on the five outcomes Hedera already ran: an HBAR payment, an `OutsideBand` revert, a scheduled payment of 5 BAND, a `PoolOff` revert, and a schedule the contract created through the Schedule Service precompile. No wallet. The Lab tab is the rule. Its fresh-feed row is the live testnet price. The other rows are simulations. None of them send a transaction.
+The hosted desk is [bandpay-two.vercel.app](https://bandpay-two.vercel.app). It opens on the five outcomes Hedera already ran. No wallet. The Lab tab is the rule. Its fresh-feed row is the live testnet price. The other rows are simulations. None of them send a transaction.
 
-### With testnet HBAR
+A testnet payment needs an ECDSA account with HBAR from the [faucet](https://portal.hedera.com/faucet). Do not reuse `0.0.10015230`. The key stays in the shell. The commands are under [One payment, with a key](#one-payment-with-a-key).
 
-Only this path needs an account. It must be ECDSA, not ED25519, and it must hold HBAR from the [faucet](https://portal.hedera.com/faucet). Do not reuse `0.0.10015230`. The key stays in the shell. The commands are under [One payment, with a key](#one-payment-with-a-key).
+## 3. The testnet transactions
+
+Five schedules. Each one is Hedera calling `release`.
+
+| What Hedera did | Open it |
+| --- | --- |
+| Paid the HBAR | [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928) |
+| Reverted `OutsideBand`. The escrow stayed | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) |
+| Paid 5 BAND | [schedule 0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) |
+| Reverted `PoolOff`. The escrow stayed | [schedule 0.0.10832633](https://hashscan.io/testnet/schedule/0.0.10832633) |
+| The contract created the schedule. The payer signed. Hedera paid | [schedule 0.0.10839746](https://hashscan.io/testnet/schedule/0.0.10839746) |
+
+The same five results are on [HCS topic 0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517). The longer table, with the contract addresses, is under [Testnet](#testnet).
+
+## Video
+
+Two minutes and four seconds. Under the five-minute limit. The cards are the `npm run demo` results and these five schedules. Not a desktop capture.
+
+[Watch the demo](docs/demo/BandPay-demo.mp4)
+
+## Already available
+
+Use the other tool when it is the job.
+
+| You need | Use |
+| --- | --- |
+| A transfer, a token, a topic, or a scheduled transfer with no price check | The [Hedera portal](https://portal.hedera.com) and the SDK. No contract. |
+| A vault that Hedera ticks, with a pluggable strategy | [`payments-scheduler`](https://github.com/hedera-dev/scaffold-hbar/tree/templates/payments-scheduler). Local tests mock the schedule service. |
+| A page that reads Chainlink, Pyth, or Supra | [`oracles`](https://github.com/hedera-dev/scaffold-hbar/tree/templates/oracles). It does not refuse a payment. |
+| A payment Hedera fires, that reverts unless two HBAR feeds agree and the price is inside the band | This template. The escrow stays on `OutsideBand`, `FeedsDisagree`, `NoPrice`, and `PoolOff`. |
 
 ## What the template does
 
