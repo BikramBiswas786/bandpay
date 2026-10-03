@@ -8,21 +8,33 @@ You escrow HBAR, or an HTS token. You sign one schedule. At expiry, Hedera calls
 
 ## 1. One command
 
-This is the self-check. Git needs a name and an email, or the scaffolder stops before its first commit. Node 20.18.3 or newer.
-
-Paste this as one line, into an idle prompt. `npx --yes` answers npm’s install question. `--yes` answers the scaffolder. Do not paste it into `Ok to proceed? (y)`.
+This is the self-check, the same command the other templates publish. Git needs a name and an email, or the scaffolder stops before its first commit. Node 20.18.3 or newer.
 
 ```bash
-git config --global user.name "Your Name" && git config --global user.email "you@example.com" && npx --yes create-scaffold-hbar@latest my-pay --template BikramBiswas786/bandpay --yes && cd my-pay && npm run demo
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+npm create scaffold-hbar@latest -- --template BikramBiswas786/bandpay
+cd my-hedera-dapp
+npm run demo
 ```
 
-PowerShell:
+Run the `npm create` line alone. If npm asks `Ok to proceed? (y)`, type `y` and Enter. Do not paste `cd` into that prompt. That answer cancels the install. `npm test` then hits whatever `package.json` is in your home folder (`user@1.0.0`, “no test specified”), not this template.
+
+To name the folder, put it before `--`:
+
+```bash
+npm create scaffold-hbar@latest my-pay -- --template BikramBiswas786/bandpay
+cd my-pay
+npm run demo
+```
+
+PowerShell, one line, no prompt:
 
 ```powershell
-git config --global user.name "Your Name"; git config --global user.email "you@example.com"; npx --yes create-scaffold-hbar@latest my-pay --template BikramBiswas786/bandpay --yes; if ($LASTEXITCODE -eq 0) { Set-Location .\my-pay; npm run demo }
+git config --global user.name "Your Name"; git config --global user.email "you@example.com"; $env:npm_config_yes='true'; npm create scaffold-hbar@latest -- my-pay -- --template BikramBiswas786/bandpay --yes; if ($LASTEXITCODE -eq 0) { Set-Location .\my-pay; npm run demo }
 ```
 
-If you already typed `cd my-pay` or `cd my-hedera-dapp` at `Ok to proceed? (y)`, npm canceled. You are still in `C:\Users\USER`, and `npm test` there is some other `package.json` (`user@1.0.0`, “no test specified”). Press Ctrl+C, then paste the line above. `npm run demo` exists only inside `my-pay`.
+Checked 3 Oct 2026 from an empty directory. The create command exited 0 and wrote `my-pay`. `npm run demo` then exited 0: one local payment, then `OutsideBand`, `Disagree`, `NoPrice`, `PoolOff`, and `ScheduleFailed` (this chain has no Schedule Service).
 
 Do not run `npm install` again after the scaffolder finishes. If it asks for Foundry, GitHub did not return `template.json`. Run the same command with `--solidity-framework hardhat --package-manager npm`.
 
