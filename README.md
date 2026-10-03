@@ -8,28 +8,27 @@ You escrow HBAR, or an HTS token. You sign one schedule. At expiry, Hedera calls
 
 ## 1. One command
 
-This is the self-check. Git needs a name and an email, or the scaffolder stops before its first commit.
+This is the self-check. Git needs a name and an email, or the scaffolder stops before its first commit. Node 20.18.3 or newer.
+
+Paste this as one line, into an idle prompt. `npx --yes` answers npm’s install question. `--yes` answers the scaffolder. Do not paste it into `Ok to proceed? (y)`.
 
 ```bash
-git config --global user.name "Your Name"
-git config --global user.email "you@example.com"
-npm create scaffold-hbar@latest -- --template BikramBiswas786/bandpay
-cd my-hedera-dapp
-npm run demo
+git config --global user.name "Your Name" && git config --global user.email "you@example.com" && npx --yes create-scaffold-hbar@latest my-pay --template BikramBiswas786/bandpay --yes && cd my-pay && npm run demo
 ```
 
-The first line fetches this repo, reads `template.json`, and installs Hardhat. With no directory name, the folder is `my-hedera-dapp`. To choose one, put it before `--`:
+PowerShell:
 
-```bash
-npm create scaffold-hbar@latest -- my-pay -- --template BikramBiswas786/bandpay
-cd my-pay
+```powershell
+git config --global user.name "Your Name"; git config --global user.email "you@example.com"; npx --yes create-scaffold-hbar@latest my-pay --template BikramBiswas786/bandpay --yes; if ($LASTEXITCODE -eq 0) { Set-Location .\my-pay; npm run demo }
 ```
 
-Do not run `npm install` again. If it asks for Foundry, GitHub did not return `template.json`. Run the same command with `--solidity-framework hardhat --package-manager npm`.
+If you already typed `cd my-pay` or `cd my-hedera-dapp` at `Ok to proceed? (y)`, npm canceled. You are still in `C:\Users\USER`, and `npm test` there is some other `package.json` (`user@1.0.0`, “no test specified”). Press Ctrl+C, then paste the line above. `npm run demo` exists only inside `my-pay`.
+
+Do not run `npm install` again after the scaffolder finishes. If it asks for Foundry, GitHub did not return `template.json`. Run the same command with `--solidity-framework hardhat --package-manager npm`.
 
 ## 2. A fresh developer, end to end
 
-`npm run demo` needs no account and no network. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays. After `OutsideBand`, the demo also cancels, and the payer is repaid. `ScheduleFailed` is the laptop: it has no Schedule Service. On testnet, Hedera fires the call.
+Run these inside `my-pay`. `pwd` (PowerShell: `Get-Location`) must end with that folder. `npm run demo` needs no account and no network. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays. After `OutsideBand`, the demo also cancels, and the payer is repaid. `ScheduleFailed` is the laptop: it has no Schedule Service. On testnet, Hedera fires the call.
 
 ```bash
 npm test
@@ -347,6 +346,7 @@ A payroll is `fundHbarUsd` for a dollar amount, or `fundHbarInstallments` plus `
 
 | What you see | What it means |
 | --- | --- |
+| `npm error canceled`, then `Missing script: "demo"` or `Error: no test specified` from `user@1.0.0` | npm asked `Ok to proceed? (y)` and the next pasted line was `cd my-pay`. Nothing was installed. The shell is still `C:\Users\USER` |
 | The scaffolder asks for Foundry | GitHub did not return `template.json`. Run the command again, or add `--solidity-framework hardhat`. |
 | `INSUFFICIENT_PAYER_BALANCE` | The account needs more testnet HBAR. Use the faucet. |
 | `INVALID_SIGNATURE` | The key is ED25519, or it is not the key for `HEDERA_OPERATOR_ID`. Use ECDSA. |
