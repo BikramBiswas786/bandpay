@@ -331,7 +331,7 @@ export default function Page() {
       <p className="status" aria-live="polite">
         {activity[0]
           ? `${activity[0].title}. ${activity[0].detail}`
-          : "No wallet. Hedera already ran the three outcomes."}
+          : "No wallet. Hedera already ran five outcomes: paid, outside the band, 5 BAND, pool off, and a precompile schedule."}
       </p>
       <div className="frame">
         <nav className="nav">
