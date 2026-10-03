@@ -66,11 +66,13 @@ The same five results are on [HCS topic 0.0.10832517](https://hashscan.io/testne
 
 ## Video
 
-Two minutes and 52 seconds. Under the five-minute limit. It is the three checks, in order: the one scaffold command, `npm run demo`, then the five testnet schedules. No Hedera account for the first two.
+2:20. Under the five-minute limit. The live desk on Vercel, then one executed schedule on Hashscan, then `npm run demo` in a fresh scaffold. No Hedera account for that command.
+
+On screen: the live HBAR price and the schedules Hedera already ran; [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928), a transfer Hedera executed; the lab, in order, Chainlink stale, feeds disagree, price outside the band, SaucerSwap off the oracle, and the oracle setting the HBAR; Sign, then the note that an EVM wallet cannot sign the schedule; then `npm run demo`. `ScheduleFailed` in that output is the laptop. This chain has no Schedule Service. On testnet, Hedera fires `release`.
 
 [Watch the walkthrough](docs/demo/BandPay-for-developers.mp4)
 
-The 42-second clip is the commands themselves, silent: `npm run demo`, then 18 Hardhat tests. The demo pays 0.1 HBAR, then prints `OutsideBand`, `Disagree`, `NoPrice`, `PoolOff`, and `ScheduleFailed`.
+21 seconds. That demo command on its own, with the narration for it.
 
 [Watch the run](docs/demo/BandPay-demo.mp4)
 
