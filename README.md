@@ -61,7 +61,7 @@ npm run dev
 
 The hosted desk is [bandpay-two.vercel.app](https://bandpay-two.vercel.app). It opens on the five outcomes Hedera already ran. No wallet. The Lab tab is the rule. Its fresh-feed row is the live testnet price. The other rows are simulations. None of them send a transaction.
 
-A testnet payment needs an ECDSA account with HBAR from the [faucet](https://portal.hedera.com/faucet). Do not reuse `0.0.10015230`. The key stays in the shell. The commands are under [One payment, with a key](#one-payment-with-a-key).
+A testnet payment needs an ECDSA account with HBAR from the [faucet](https://portal.hedera.com/faucet). Do not reuse `0.0.10015230`: that account signed the published proofs, so it is not your payer. The key stays in the shell. The commands are under [One payment, with a key](#one-payment-with-a-key).
 
 ## 3. The testnet transactions
 
@@ -165,7 +165,7 @@ The key stays in the shell. Nothing here is committed.
 
 ## Prerequisites
 
-Node `20.18.3` or newer. An ECDSA testnet account, not an ED25519 key. About 1 HBAR covers a deploy, a few 0.1 HBAR escrows, and the schedule fees. [Faucet](https://portal.hedera.com/faucet). Do not reuse account `0.0.10015230`.
+Node `20.18.3` or newer. An ECDSA testnet account, not an ED25519 key. About 1 HBAR covers a deploy, a few 0.1 HBAR escrows, and the schedule fees. [Faucet](https://portal.hedera.com/faucet). Do not reuse account `0.0.10015230`. It signed the proofs below, so a new transaction from it is not a new payer.
 
 Chainlink's testnet feed is HBAR/USD. Supra pair 75 is HBAR/USDT. They track the same asset closely enough that a 300 bps gap still means one of them is wrong. The contract uses that gap as the disagreement check, not as a FX conversion.
 
@@ -305,7 +305,7 @@ HBAR does not need this step. Use `fund.js` for that.
 
 ## Testnet
 
-These links are the proof that Hedera will fire `release`. Every one of them was signed by `0.0.10015230`. Do not reuse that account. Create a new ECDSA account from the portal. The faucet API needs a personal access token, which this repo does not have.
+These links are the proof that Hedera will fire `release`. Every one of them was signed by `0.0.10015230`. Do not reuse that account: you do not control it, and it is already the payer on these proofs. Create a new ECDSA account from the portal. The faucet API needs a personal access token, which this repo does not have.
 
 The contracts below were deployed before `Funded`, `Released`, and `Cancelled` existed. The source emits those events. A new deploy emits them on chain. Hedera has executed a scheduled HTS release: schedule [0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) paid plan 1, 5 BAND. Topic [0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) repeats that result, the HBAR payment, the `OutsideBand` revert, and the `PoolOff` revert.
 
