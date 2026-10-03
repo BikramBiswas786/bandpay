@@ -22,5 +22,10 @@
   "devDependencies": {
     "prettier": "^3.4.2",
     "solhint": "^5.0.5"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.5",
+    "postcss": "8.5.28",
+    "protobufjs": "7.6.6"
   }
 }

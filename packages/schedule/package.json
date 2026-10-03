@@ -6,6 +6,6 @@
     "schedule": "node schedule.mjs"
   },
   "dependencies": {
-    "@hashgraph/sdk": "^2.68.0"
+    "@hashgraph/sdk": "2.68.0"
   }
 }

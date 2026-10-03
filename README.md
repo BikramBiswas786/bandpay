@@ -277,13 +277,15 @@ node packages/hardhat/scripts/fund.js
 
 ## Dependency audit
 
-The advisory report on 3 Oct 2026 listed 51 findings (2 critical, 33 high, 2 moderate, 14 low). On 2 Oct the same tree reported 33. The count rose because the advisory database added findings, not because this template added a dependency. Applying the suggested fixes without a forced major upgrade does not clear them. The offered upgrades are Next 16.3.8 and Hardhat 3, which this template does not take the day before the deadline.
+The production audit in CI, at high level and with dev dependencies omitted, exits 0. There is no critical or high finding in the production tree.
 
-| Finding | Where it sits | Does the deployed desk run it? |
-| --- | --- | --- |
-| `next@14.2.35`, rated critical. The advisory list includes a Windows image-optimizer RCE, an AVIF image RCE, and several Server Component issues | Production dependency of `packages/nextjs` | The desk does not use `next/image`, AVIF, or React Server Components. Vercel runs Linux. The patched releases are Next 15.5.24 and 16.3.8. |
-| `protobufjs`, rated critical for code generation from a crafted schema | Inside `@hashgraph/sdk`, used by `packages/schedule` | No. `/api/desk` reads the mirror with `fetch`. It does not decode protobuf and it does not generate code from a schema. |
-| Hardhat, `glob`, `postcss`, `solhint`, `tmp`, `undici`, and the React Native tree inside `@hashgraph/sdk` | Development tools, or a dependency the desk does not import | No. They are not in the Vercel function. |
+| What changed | Why |
+| --- | --- |
+| `next` is `15.5.27` | The two critical Next.js advisories are fixed in 15.5.24. This template does not jump to Next 16. |
+| `protobufjs` is `7.6.6`, `@grpc/grpc-js` is `1.14.5`, `postcss` is `8.5.28` | These are the patched releases inside `@hashgraph/sdk` and Next. `package.json` `overrides` pins them. |
+| React Native is not installed | `@hashgraph/cryptography` only peer-depends on it. `.npmrc` sets `legacy-peer-deps=true` so a Node payment script does not download React Native. |
+
+Eight low findings remain. They are `elliptic` inside `ethers` v5, which `@hashgraph/sdk` 2.68 still depends on. Replacing that SDK is a breaking change and is not this template. The desk does not import `elliptic`. The schedule scripts do, because that is how the Hedera SDK signs.
 
 ## HTS
 
