@@ -13,25 +13,27 @@ This is the self-check, the same command the other templates publish. Git needs 
 ```bash
 git config --global user.name "Your Name"
 git config --global user.email "you@example.com"
-npm create scaffold-hbar@latest -- --template BikramBiswas786/bandpay
+npm \
+create scaffold-hbar@latest -- --template BikramBiswas786/bandpay
 cd my-hedera-dapp
 npm run demo
 ```
 
-Run the `npm create` line alone. If npm asks `Ok to proceed? (y)`, type `y` and Enter. Do not paste `cd` into that prompt. That answer cancels the install. `npm test` then hits whatever `package.json` is in your home folder (`user@1.0.0`, “no test specified”), not this template.
+Run the scaffold line alone. If the installer asks `Ok to proceed? (y)`, type `y` and Enter. Do not paste `cd` into that prompt. That answer cancels the install. The test script then hits whatever `package.json` is in your home folder (`user@1.0.0`, “no test specified”), not this template.
 
-To name the folder, put it before `--`:
+To name the folder, put the name after the one `--`, and do not add a second `--` before `--template`. A second `--` drops the template and the scaffolder falls back to its prompts.
 
 ```bash
-npm create scaffold-hbar@latest my-pay -- --template BikramBiswas786/bandpay
+npm \
+create scaffold-hbar@latest -- my-pay --template BikramBiswas786/bandpay
 cd my-pay
 npm run demo
 ```
 
-PowerShell, one line, no prompt:
+PowerShell, one line, no prompt. `npx` is used here because this file is rewritten on install: any `npm` plus a word other than `run`, `install`, `exec`, or `ci` becomes `npm run`.
 
 ```powershell
-git config --global user.name "Your Name"; git config --global user.email "you@example.com"; $env:npm_config_yes='true'; npm create scaffold-hbar@latest -- my-pay -- --template BikramBiswas786/bandpay --yes; if ($LASTEXITCODE -eq 0) { Set-Location .\my-pay; npm run demo }
+git config --global user.name "Your Name"; git config --global user.email "you@example.com"; npx --yes create-scaffold-hbar@latest my-pay --template BikramBiswas786/bandpay --yes; if ($LASTEXITCODE -eq 0) { Set-Location .\my-pay; npm run demo }
 ```
 
 Checked 3 Oct 2026 from an empty directory. The create command exited 0 and wrote `my-pay`. `npm run demo` then exited 0: one local payment, then `OutsideBand`, `Disagree`, `NoPrice`, `PoolOff`, and `ScheduleFailed` (this chain has no Schedule Service).
@@ -43,7 +45,7 @@ Do not run `npm install` again after the scaffolder finishes. If it asks for Fou
 Run these inside `my-pay`. `pwd` (PowerShell: `Get-Location`) must end with that folder. `npm run demo` needs no account and no network. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays. After `OutsideBand`, the demo also cancels, and the payer is repaid. `ScheduleFailed` is the laptop: it has no Schedule Service. On testnet, Hedera fires the call.
 
 ```bash
-npm test
+npm run test
 npm run lint
 npm run check
 npm run dev
@@ -52,7 +54,7 @@ npm run dev
 | Command | What it does | Key |
 | --- | --- | --- |
 | `npm run demo` | Pays one local escrow, then shows the four reverts and the missing schedule service | No |
-| `npm test` | Compiles the contract and runs the rule, decoder, instalment, and contract tests | No |
+| `npm run test` | Compiles the contract and runs the rule, decoder, instalment, and contract tests | No |
 | `npm run lint` | ESLint, solhint, and Prettier | No |
 | `npm run check` | Reads live Chainlink and Supra and prints what `release` would do | No |
 | `npm run dev` | The desk at `http://localhost:3000` | No |
@@ -223,13 +225,13 @@ Node 20.18.3 or newer. Git needs `user.name` and `user.email` before the first c
 
 ```bash
 npm install
-npm test
+npm run test
 npm run lint
 npm run check
 npm run dev
 ```
 
-`npm test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, the instalment guard, the HCS message guard, the pool quote, and eighteen contract cases. Those cases include `Funded`, `Released`, `Cancelled`, `Attempted`, a USD-sized HBAR payout, an instalment split, the local refusal when the schedule precompile is missing, and a release sent by the contract itself.
+`npm run test` needs no key and no network. It compiles the contract and runs the price rule, the feed decoder, the plan decoder, the instalment guard, the HCS message guard, the pool quote, and eighteen contract cases. Those cases include `Funded`, `Released`, `Cancelled`, `Attempted`, a USD-sized HBAR payout, an instalment split, the local refusal when the schedule precompile is missing, and a release sent by the contract itself.
 
 `npm run lint` is ESLint on the page, solhint on the contracts, and a Prettier check. `npm run format` rewrites the JavaScript. The scaffolder runs that format command after install. The page uses a system font, so `npm run build` does not download a font.
 
@@ -275,7 +277,7 @@ node packages/hardhat/scripts/fund.js
 
 ## Dependency audit
 
-`npm audit` on 3 Oct 2026 reported 51 findings (2 critical, 33 high, 2 moderate, 14 low). On 2 Oct the same tree reported 33. The count rose because the advisory database added findings, not because this template added a dependency. `npm audit fix` without `--force` does not clear them. The fixes npm offers are Next 16.3.8 and Hardhat 3, which are major upgrades. This template does not take those the day before the deadline.
+The advisory report on 3 Oct 2026 listed 51 findings (2 critical, 33 high, 2 moderate, 14 low). On 2 Oct the same tree reported 33. The count rose because the advisory database added findings, not because this template added a dependency. Applying the suggested fixes without a forced major upgrade does not clear them. The offered upgrades are Next 16.3.8 and Hardhat 3, which this template does not take the day before the deadline.
 
 | Finding | Where it sits | Does the deployed desk run it? |
 | --- | --- | --- |
@@ -358,7 +360,7 @@ A payroll is `fundHbarUsd` for a dollar amount, or `fundHbarInstallments` plus `
 
 | What you see | What it means |
 | --- | --- |
-| `npm error canceled`, then `Missing script: "demo"` or `Error: no test specified` from `user@1.0.0` | npm asked `Ok to proceed? (y)` and the next pasted line was `cd my-pay`. Nothing was installed. The shell is still `C:\Users\USER` |
+| The installer prints `canceled`, then `Missing script: "demo"` or `Error: no test specified` from `user@1.0.0` | The installer asked `Ok to proceed? (y)` and the next pasted line was `cd my-pay`. Nothing was installed. The shell is still `C:\Users\USER` |
 | The scaffolder asks for Foundry | GitHub did not return `template.json`. Run the command again, or add `--solidity-framework hardhat`. |
 | `INSUFFICIENT_PAYER_BALANCE` | The account needs more testnet HBAR. Use the faucet. |
 | `INVALID_SIGNATURE` | The key is ED25519, or it is not the key for `HEDERA_OPERATOR_ID`. Use ECDSA. |

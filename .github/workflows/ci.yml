@@ -60,7 +60,7 @@ jobs:
           ok=0
           for attempt in 1 2 3; do
             rm -rf "$RUNNER_TEMP/bandpay-ci"
-            if npx --yes create-scaffold-hbar@latest bandpay-ci --template BikramBiswas786/bandpay --yes --ci --skip-hedera-skills --package-manager npm --network testnet --destination "$RUNNER_TEMP/bandpay-ci"; then
+            if npx --yes create-scaffold-hbar@latest bandpay-ci --template BikramBiswas786/bandpay --yes --ci --skip-hedera-skills --package-manager=npm --network testnet --destination "$RUNNER_TEMP/bandpay-ci"; then
               ok=1
               break
             fi

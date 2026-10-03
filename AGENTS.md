@@ -27,7 +27,7 @@ Keep `BandPay.sol`, `packages/schedule/schedule.mjs`, `packages/nextjs/lib/feeds
 ## Commands
 
 ```bash
-npm test
+npm run test
 npm run lint
 npm run dev
 ```
@@ -37,3 +37,27 @@ Schedule, after deploy, with env vars set in the shell only:
 ```bash
 npm run schedule --workspace=@bandpay/schedule
 ```
+
+## Files
+
+| Path | What it owns |
+| --- | --- |
+| `packages/hardhat/contracts/BandPay.sol` | The escrow. `release` pays or reverts. `scheduleRelease` calls `0x16b`. |
+| `packages/hardhat/test/BandPay.js` | The contract cases, including the local refusal when `0x16b` is missing. |
+| `packages/rules/decide.js` | The price rule. The page keeps its own copy in `packages/nextjs/lib/decide.js`. The test fails if they differ. |
+| `packages/rules/pool.js` | The SaucerSwap gap. Dollar invoices only. |
+| `packages/nextjs/lib/feeds.js` | Chainlink and Supra decoding, including the Supra millisecond conversion. |
+| `packages/nextjs/lib/plans.js` | What an open plan would do. `cache: "no-store"` stays. |
+| `packages/nextjs/app/page.js` | The desk. It does not hold a key and it cannot sign a schedule. |
+| `packages/schedule/schedule.mjs` | Signs one wait-for-expiry schedule per plan. Refuses a deadline before `executeAt`. |
+| `packages/schedule/receipt.mjs` | Writes the mirror result to the topic after Hedera has one. The contract cannot write that topic. |
+| `packages/nextjs/lib/books.js` | The public proof ids. Topic `0.0.10832517`. Do not point a testnet deploy at a self-priced pair. |
+
+## Invariants
+
+- The contract does not choose a price. Chainlink, then Supra, does. No fresh source means the escrow stays.
+- Two fresh sources more than 300 bps apart do not pay.
+- A dollar invoice that is more than 300 bps from SaucerSwap does not pay. An ordinary HBAR band does not ask the pool.
+- `0x16b` creates the schedule. The payer signs it. Hedera calls `release`. A laptop has no Schedule Service, so the demo ends at `ScheduleFailed`.
+- HTS uses `0x167` and a Hedera allowance. An ERC-20 `approve` on the facade is not that allowance.
+- Do not add a keeper, a second product, or a key in the repo.
