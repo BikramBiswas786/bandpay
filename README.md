@@ -2,13 +2,15 @@
 
 # BandPay
 
+I am Bikram Biswas. This is the template I am submitting.
+
 Hedera will schedule a transfer. An oracle page will show you a price. Neither will hold the money and pay it only when two feeds agree. This template does that one thing.
 
 You escrow HBAR, or an HTS token. You sign one schedule. At expiry, Hedera calls `release`. If Chainlink and Supra agree, and the price sits inside your band, the recipient is paid. If they do not, the call reverts and the escrow stays until you cancel it. A dollar invoice also asks SaucerSwap, and reverts `PoolOff` when that pool is more than 3% off the oracle.
 
 ## 1. One command
 
-This is the self-check, the same command the other templates publish. Git needs a name and an email, or the scaffolder stops before its first commit. Node 20.18.3 or newer.
+Node 20.18.3 or newer. Set your git name and email before the command below, or the scaffolder stops before its first commit.
 
 ```bash
 git config --global user.name "Your Name"
@@ -19,7 +21,7 @@ cd my-hedera-dapp
 npm run demo
 ```
 
-Run the scaffold line alone. If the installer asks `Ok to proceed? (y)`, type `y` and Enter. Do not paste `cd` into that prompt. That answer cancels the install. The test script then hits whatever `package.json` is in your home folder (`user@1.0.0`, “no test specified”), not this template.
+Run the scaffold line alone. If the installer asks `Ok to proceed? (y)`, type `y` and Enter. Do not paste `cd` into that prompt. That answer cancels the install, and the next command runs against the `package.json` in your home folder, not this template.
 
 To name the folder, put the name after the one `--`, and do not add a second `--` before `--template`. A second `--` drops the template and the scaffolder falls back to its prompts.
 
@@ -30,19 +32,19 @@ cd my-pay
 npm run demo
 ```
 
-PowerShell, one line, no prompt. `npx` is used here because this file is rewritten on install: any `npm` plus a word other than `run`, `install`, `exec`, or `ci` becomes `npm run`.
+PowerShell, one line, no prompt. I use `npx` here because the scaffolder rewrites a line in this file when `npm` is followed by any word other than `run`, `install`, `exec`, or `ci`.
 
 ```powershell
 git config --global user.name "Your Name"; git config --global user.email "you@example.com"; npx --yes create-scaffold-hbar@latest my-pay --template BikramBiswas786/bandpay --yes; if ($LASTEXITCODE -eq 0) { Set-Location .\my-pay; npm run demo }
 ```
 
-Checked 3 Oct 2026 from an empty directory. The create command exited 0 and wrote `my-pay`. `npm run demo` then exited 0: one local payment, then `OutsideBand`, `Disagree`, `NoPrice`, `PoolOff`, and `ScheduleFailed` (this chain has no Schedule Service).
+I ran this from an empty directory on 3 October 2026. The create command exited 0 and wrote `my-pay`. `npm run demo` then exited 0: one local payment, then `OutsideBand`, `Disagree`, `NoPrice`, `PoolOff`, and `ScheduleFailed`. `ScheduleFailed` is expected on a local chain. That chain has no Schedule Service.
 
 Do not run `npm install` again after the scaffolder finishes. If it asks for Foundry, GitHub did not return `template.json`. Run the same command with `--solidity-framework hardhat --package-manager npm`.
 
 ## 2. A fresh developer, end to end
 
-Run these inside `my-pay`. `pwd` (PowerShell: `Get-Location`) must end with that folder. `npm run demo` needs no account and no network. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays. After `OutsideBand`, the demo also cancels, and the payer is repaid. `ScheduleFailed` is the laptop: it has no Schedule Service. On testnet, Hedera fires the call.
+Run these inside `my-pay`. `pwd` (PowerShell: `Get-Location`) must end with that folder. `npm run demo` needs no account and no network. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays. After `OutsideBand`, the demo also cancels, and the payer is repaid. `ScheduleFailed` means the local chain has no Schedule Service. On testnet, Hedera sends the call.
 
 ```bash
 npm run test
@@ -61,7 +63,7 @@ npm run dev
 
 The hosted desk is [bandpay-two.vercel.app](https://bandpay-two.vercel.app). It opens on the five outcomes Hedera already ran. No wallet. The Lab tab is the rule. Its fresh-feed row is the live testnet price. The other rows are simulations. None of them send a transaction.
 
-A testnet payment needs an ECDSA account with HBAR from the [faucet](https://portal.hedera.com/faucet). Do not reuse `0.0.10015230`: that account signed the published proofs, so it is not your payer. The key stays in the shell. The commands are under [One payment, with a key](#one-payment-with-a-key).
+A testnet payment needs an ECDSA account with HBAR from the [faucet](https://portal.hedera.com/faucet). Do not reuse `0.0.10015230`. I signed the published proofs with that account. Use your own. The key stays in the shell. The commands are under [One payment, with a key](#one-payment-with-a-key).
 
 ## 3. The testnet transactions
 
@@ -81,9 +83,9 @@ The current contract is [0.0.10846968](https://hashscan.io/testnet/contract/0.0.
 
 ## Video
 
-2:20. Under the five-minute limit. The live desk on Vercel, then one executed schedule on Hashscan, then `npm run demo` in a fresh scaffold. No Hedera account for that command.
+The walkthrough is 2 minutes 20 seconds. The live desk, then one executed schedule on Hashscan, then `npm run demo` in a fresh scaffold. That command needs no Hedera account.
 
-On screen: the live HBAR price and the schedules Hedera already ran; [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928), a transfer Hedera executed; the lab, in order, Chainlink stale, feeds disagree, price outside the band, SaucerSwap off the oracle, and the oracle setting the HBAR; Sign, then the note that an EVM wallet cannot sign the schedule; then `npm run demo`. `ScheduleFailed` in that output is the laptop. This chain has no Schedule Service. On testnet, Hedera fires `release`.
+On screen: the live HBAR price and the schedules Hedera already ran; [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928), a transfer Hedera executed; the lab, in order, Chainlink stale, feeds disagree, price outside the band, SaucerSwap off the oracle, and the oracle setting the HBAR; Sign, then the note that an EVM wallet cannot sign the schedule; then `npm run demo`. `ScheduleFailed` in that output is the local chain. It has no Schedule Service. On testnet, Hedera calls `release`.
 
 [Watch the walkthrough](docs/demo/BandPay-for-developers.mp4)
 
@@ -104,31 +106,31 @@ Use the other tool when it is the job.
 
 ## What the template does
 
-There is no bot. You sign one schedule. At expiry Hedera calls `release` once. If the price is outside the band, a feed is stale and the other is missing, or the two feeds disagree by more than 3%, the call reverts and the escrow stays. `cancel` returns it. You can also sign a new schedule for that same plan once the price is back inside the band. `schedule.mjs` will not sign a deadline before `executeAt`.
+There is no keeper. You sign one schedule. At expiry Hedera calls `release` once. If the price is outside the band, a feed is stale and the other is missing, or the two feeds disagree by more than 3%, the call reverts and the escrow stays. `cancel` returns it. You can also sign a new schedule for that same plan once the price is back inside the band. `schedule.mjs` will not sign a deadline before `executeAt`.
 
 The price is always HBAR. Chainlink is HBAR/USD. Supra pair 75 is HBAR/USDT, used only as the fallback for that same price. `fundToken` escrows an HTS token, but it does not look up that token's own price. A developer who needs the token's value checked has to add that feed. This template does not.
 
-The evidence, all signed by the exposed account above:
+I signed these five with `0.0.10015230`. Do not reuse that account.
 
 | What it proves | Link |
 | --- | --- |
 | Hedera executed a scheduled `release` and the plan was paid | [schedule 0.0.10820928](https://hashscan.io/testnet/schedule/0.0.10820928) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10820928) |
 | Hedera fired `release`, `OutsideBand` reverted, and the escrow stayed | [schedule 0.0.10830733](https://hashscan.io/testnet/schedule/0.0.10830733) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10830733) |
-| Hedera executed a scheduled release of an HTS token. Plan 1 was paid 5 BAND. This is not an open question. | [schedule 0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10831792) |
+| Hedera executed a scheduled release of an HTS token. Plan 1 was paid 5 BAND. | [schedule 0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10831792) |
 | A dollar invoice asked SaucerSwap. The public testnet pool was about $2.25 and the oracle was about $0.10, so `PoolOff` reverted and the escrow stayed | [schedule 0.0.10832633](https://hashscan.io/testnet/schedule/0.0.10832633) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10832633) |
 | A contract created the schedule through the Schedule Service precompile at `0x16b`. The payer signed. Hedera paid plan 2 | [schedule 0.0.10832843](https://hashscan.io/testnet/schedule/0.0.10832843) · [create](https://hashscan.io/testnet/transaction/0x0587c4431e13e76392f2932c44fa3f177f4b7c01b46ac11c958223b2c75f9fbd) · [executed call](https://hashscan.io/testnet/transaction/0.0.7314364-1790980118-485142054) |
 | `BandPay.scheduleRelease` created the schedule. The payer signed. Hedera paid 0.05 HBAR | [contract 0.0.10839717](https://hashscan.io/testnet/contract/0.0.10839717) · [schedule 0.0.10839746](https://hashscan.io/testnet/schedule/0.0.10839746) · [executed call](https://hashscan.io/testnet/transaction/0.0.7314364-1791018681-543656522) |
 | Anyone can re-read those results from HCS, with no key | [topic 0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) · [mirror](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10832517/messages?limit=10&order=asc) |
 
-Re-read from the mirror on 3 Oct 2026. The mirror link on each row is the record. `npm run check` that day printed `pool-off` for the dollar invoice, not `would-pay`.
+I re-read these from the mirror on 3 October 2026. The mirror link on each row is the record. `npm run check` that day printed `pool-off` for the dollar invoice, not `would-pay`.
 
 `fundHbarUsd` is the payroll case. The payer escrows HBAR for a dollar invoice. When the schedule fires, `release` uses the checked price, pays that many HBAR, and refunds the rest. If the dollars no longer fit in the escrow, it reverts `Underfunded`. `fundHbarInstallments` splits one escrow into at most 12 plans. `COUNT` and `EVERY_SECONDS` sign one wait-for-expiry schedule per plan. The plan amounts add up to the escrow, and a thirteenth instalment is refused.
 
 `release` is the one-shot. If you schedule `attempt` instead, a refusal is caught, the escrow still stays, and `Attempted` is logged either way, with the revert bytes (`OutsideBand`, `NoPrice`, `Disagree`, `TooEarly`, or `Underfunded`). Hashscan shows that schedule as SUCCESS even when nothing was paid. Read the `Attempted` log. The raw `release` revert, on the old contract, is what a red transaction looks like.
 
-`USD_AMOUNT` on `fund.js` escrows `usdAmount / minPrice` HBAR. Inside the band the price cannot be below `minPrice`, so the invoice cannot ask for more HBAR than the escrow. A token plan is still judged on the HBAR price, and a USD invoice rejects a token on purpose.
+`USD_AMOUNT` on `fund.js` escrows `usdAmount / minPrice` HBAR. Inside the band the price cannot be below `minPrice`, so the invoice cannot ask for more HBAR than the escrow. A token plan is still checked against the HBAR price, and a USD invoice rejects a token on purpose.
 
-A dollar invoice also asks SaucerSwap. `release` calls `getAmountsOut` on the V1 router for WHBAR to USDC. USDC is 6 decimals. If that pool is more than 3% off the oracle, the call reverts `PoolOff` and the escrow stays. Delete the router and a dollar invoice cannot pay: it reverts `NoPool`. An ordinary HBAR band does not ask the pool. That is the difference. The DEX is what makes the invoice safe, not a badge.
+A dollar invoice also asks SaucerSwap. `release` calls `getAmountsOut` on the V1 router for WHBAR to USDC. USDC is 6 decimals. If that pool is more than 3% off the oracle, the call reverts `PoolOff` and the escrow stays. Delete the router and a dollar invoice cannot pay: it reverts `NoPool`. An ordinary HBAR band does not ask the pool. That is the difference.
 
 The public testnet WHBAR/USDC pair is not a dollar. On 2 Oct 2026 `getAmountsOut` on router [0.0.19264](https://hashscan.io/testnet/contract/0.0.19264) priced 1 HBAR at about $2.25 while Chainlink was about $0.10. A fresh testnet deploy now sets that router, WHBAR `0.0.15058` and USDC `0.0.5449`. An HBAR band does not ask the pool, so it can still pay. A dollar invoice reverts `PoolOff` instead of paying the $2 pool. That is contract [0.0.10832627](https://hashscan.io/testnet/contract/0.0.10832627): Hedera called `release` on a $0.01 invoice whose band was $0.05–$0.20, the price check passed, and the pool check reverted `PoolOff` at $2.24900458 against $0.10067885. Plan 0 is still escrowed: [schedule 0.0.10832633](https://hashscan.io/testnet/schedule/0.0.10832633) · [revert](https://hashscan.io/testnet/transaction/0x112cebd6698651a83e6668603224d518a12518e3f91d21bb4dcc9fa903a67e1d). Mainnet is the public pool that does track the oracle. On 2 Oct 2026 router [0.0.3045981](https://hashscan.io/mainnet/contract/0.0.3045981) quoted 1 HBAR at $0.100419 and Chainlink was $0.10098840, 56 bps, inside the 3% band. `npm run check` prints today's gap and exits if it would be `PoolOff`. Router `0.0.3045981`, WHBAR `0.0.1456986`, USDC `0.0.456858`, pair `0.0.1462797`. Set `HEDERA_NETWORK=mainnet` and the deploy script uses those. Chainlink and Supra on mainnet still have to be set in the shell. This template does not guess the feed addresses. The pool addresses are pinned.
 
@@ -167,7 +169,7 @@ The key stays in the shell. Nothing here is committed.
 
 ## Prerequisites
 
-Node `20.18.3` or newer. An ECDSA testnet account, not an ED25519 key. About 1 HBAR covers a deploy, a few 0.1 HBAR escrows, and the schedule fees. [Faucet](https://portal.hedera.com/faucet). Do not reuse account `0.0.10015230`. It signed the proofs below, so a new transaction from it is not a new payer.
+Node `20.18.3` or newer. An ECDSA testnet account, not an ED25519 key. About 1 HBAR covers a deploy, a few 0.1 HBAR escrows, and the schedule fees. [Faucet](https://portal.hedera.com/faucet). Do not reuse account `0.0.10015230`. I signed the proofs below with it. Use your own account.
 
 Chainlink's testnet feed is HBAR/USD. Supra pair 75 is HBAR/USDT. They track the same asset closely enough that a 300 bps gap still means one of them is wrong. The contract uses that gap as the disagreement check, not as a FX conversion.
 
@@ -198,7 +200,7 @@ sequenceDiagram
 
 | Remove | What is left |
 | --- | --- |
-| The wait-for-expiry schedule | Someone has to send `release` at the right time. That is a keeper. The template no longer has a point. |
+| The wait-for-expiry schedule | Someone has to send `release` at the right time. That is a keeper, and this template no longer does what it is for. |
 | Chainlink and Supra, or `feeds.js` | There is no price. `release` cannot pay, and the page cannot tell you why. |
 | The 300 bps check | One bad feed can push a payment through. |
 | `associate` before `fundToken` | Hedera rejects the token credit. The HTS path reverts on every fund. |
@@ -309,7 +311,7 @@ HBAR does not need this step. Use `fund.js` for that.
 
 ## Testnet
 
-These links are the proof that Hedera will fire `release`. Every one of them was signed by `0.0.10015230`. Do not reuse that account: you do not control it, and it is already the payer on these proofs. Create a new ECDSA account from the portal. The faucet API needs a personal access token, which this repo does not have.
+These links show Hedera calling `release`. I signed the schedules in this section with `0.0.10015230`. Do not reuse that account. It is already the payer on these proofs. Create your own ECDSA account from the portal.
 
 The contracts below were deployed before `Funded`, `Released`, and `Cancelled` existed. The source emits those events. A new deploy emits them on chain. Hedera has executed a scheduled HTS release: schedule [0.0.10831792](https://hashscan.io/testnet/schedule/0.0.10831792) paid plan 1, 5 BAND. Topic [0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517) repeats that result, the HBAR payment, the `OutsideBand` revert, and the `PoolOff` revert.
 
@@ -364,7 +366,7 @@ A payroll is `fundHbarUsd` for a dollar amount, or `fundHbarInstallments` plus `
 
 | What you see | What it means |
 | --- | --- |
-| The installer prints `canceled`, then `Missing script: "demo"` or `Error: no test specified` from `user@1.0.0` | The installer asked `Ok to proceed? (y)` and the next pasted line was `cd my-pay`. Nothing was installed. The shell is still `C:\Users\USER` |
+| The installer prints `canceled`, then `Missing script: "demo"` or `Error: no test specified` | The installer asked `Ok to proceed? (y)` and the next pasted line was `cd my-pay`. Nothing was installed. The shell is still your home folder |
 | The scaffolder asks for Foundry | GitHub did not return `template.json`. Run the command again, or add `--solidity-framework hardhat`. |
 | `INSUFFICIENT_PAYER_BALANCE` | The account needs more testnet HBAR. Use the faucet. |
 | `INVALID_SIGNATURE` | The key is ED25519, or it is not the key for `HEDERA_OPERATOR_ID`. Use ECDSA. |
