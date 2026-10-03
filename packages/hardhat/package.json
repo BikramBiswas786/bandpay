@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "compile": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat compile",
-    "test": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat test"
+    "test": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat test",
+    "demo": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run scripts/demo.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",

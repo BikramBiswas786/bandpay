@@ -1,6 +1,12 @@
 # Bandpay
 
-Schedule one payment. Hedera fires it. It clears only inside your price band. The rules, the Hedera calls, and the limits are in [docs/rules.md](docs/rules.md).
+Schedule one payment. Hedera fires it. It clears only inside your price band.
+
+```bash
+npm run demo
+```
+
+No Hedera account. It pays 0.1 HBAR, then shows `OutsideBand`, `Disagree`, `NoPrice`, and `PoolOff`. The escrow stays on each of those. `ScheduleFailed` is the local chain: it has no Schedule Service. On testnet, Hedera fires the call. The rules are in [docs/rules.md](docs/rules.md).
 
 ## Already available
 
@@ -37,6 +43,7 @@ You can run the tests and open the desk before you create an account. The browse
 
 ```bash
 cd my-pay
+npm run demo
 npm test
 npm run lint
 npm run check
@@ -45,6 +52,7 @@ npm run dev
 
 | Command | What it does | Key |
 | --- | --- | --- |
+| `npm run demo` | Pays one local escrow, then shows the four reverts and the missing schedule service | No |
 | `npm test` | Compiles the contract and runs the rule, decoder, instalment, and contract tests | No |
 | `npm run lint` | ESLint, solhint, and Prettier | No |
 | `npm run check` | Reads live Chainlink and Supra and prints what `release` would do | No |
