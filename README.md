@@ -66,9 +66,9 @@ The same five results are on [HCS topic 0.0.10832517](https://hashscan.io/testne
 
 ## Video
 
-Two minutes and 52 seconds. Under the five-minute limit. Spoken, with subtitles. It runs in the order a judge checks: the one scaffold command, `npm run demo` with no account, the five testnet schedules, then [bandpay-two.vercel.app](https://bandpay-two.vercel.app). Not a desktop capture.
+42 seconds. Silent. It is the real `npm run demo`, then the real `npx hardhat test`: 18 passing. No voice. The demo pays 0.1 HBAR, then prints `OutsideBand`, `Disagree`, `NoPrice`, `PoolOff`, and `ScheduleFailed`.
 
-[Watch the developer cut](docs/demo/BandPay-for-developers.mp4)
+[Watch the run](docs/demo/BandPay-demo.mp4)
 
 ## Already available
 
