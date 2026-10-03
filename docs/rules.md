@@ -32,7 +32,7 @@ An HBAR band does not ask SaucerSwap. A dollar invoice does. On testnet the publ
 
 | Thing | Where it lives |
 | --- | --- |
-| Creating the schedule | `packages/schedule/schedule.mjs`, or `scheduleRelease` on a contract that has that function. The testnet payment through the precompile was `ScheduleProbe` `0.0.10832802`, schedule `0.0.10832843`. Two later attempts from `BandPay` itself reverted. |
+| Creating the schedule | `scheduleRelease` on BandPay. Contract `0.0.10839717` created schedule `0.0.10839746`. The payer signed. Hedera paid plan 1. An unsigned schedule from the same contract, `0.0.10839720`, executed as `INVALID_PAYER_SIGNATURE` and paid nothing. `packages/schedule/schedule.mjs` is the same wait-for-expiry shape without the precompile. ScheduleProbe `0.0.10832802` is an earlier proof, not this bytecode. |
 | The HCS receipt | `packages/schedule/receipt.mjs`, after the mirror shows a result. The contract cannot write the topic. |
 | The decision a developer sees before signing | `packages/rules/decide.js`. The contract repeats it. The page does not get a vote. |
 

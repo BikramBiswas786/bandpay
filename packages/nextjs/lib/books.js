@@ -17,6 +17,11 @@ const PROOF = [
     address: "0xa5128A765b8b5512a7a0761c897822787689445c",
     note: "Dollar invoice. Schedule 0.0.10832633 called release and reverted PoolOff. The public testnet pool priced HBAR near $2.25. The oracle was about $0.10. The escrow stayed.",
   },
+  {
+    id: "0.0.10839717",
+    address: "0xfB8Be56f0c016105B8875813e400C1E0BaFd69bf",
+    note: "scheduleRelease on this bytecode. Schedule 0.0.10839746 was signed by the payer and paid plan 1, 0.05 HBAR. Unsigned schedule 0.0.10839720 returned INVALID_PAYER_SIGNATURE and paid nothing.",
+  },
 ];
 
 const SCHEDULES = [
@@ -39,6 +44,10 @@ const SCHEDULES = [
   {
     id: "0.0.10832843",
     transactionId: "0.0.7314364-1790980118-485142054",
+  },
+  {
+    id: "0.0.10839746",
+    transactionId: "0.0.7314364-1791018681-543656522",
   },
 ];
 

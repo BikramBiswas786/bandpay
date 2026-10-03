@@ -709,6 +709,12 @@ const RECORDS = [
       "A contract created the schedule through the Schedule Service. The payer signed. Hedera paid plan 2.",
     id: "0.0.10832843",
   },
+  {
+    result: "This contract",
+    detail:
+      "BandPay.scheduleRelease created the schedule. The payer signed. Hedera paid 0.05 HBAR.",
+    id: "0.0.10839746",
+  },
 ];
 
 function hashscan(hash) {
@@ -741,6 +747,9 @@ function scheduleLine(item) {
   }
   if (item.id === "0.0.10832843") {
     return "A contract created this schedule through the Schedule Service precompile. The payer signed it. Hedera paid plan 2.";
+  }
+  if (item.id === "0.0.10839746") {
+    return "BandPay.scheduleRelease created this schedule. The payer signed it. Hedera paid plan 1.";
   }
   if (item.result === "SUCCESS") return "Hedera paid the escrow.";
   if (item.result === "CONTRACT_REVERT_EXECUTED") {

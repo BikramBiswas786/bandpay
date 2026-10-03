@@ -193,22 +193,26 @@ contract BandPay {
         id = _open(msg.sender, recipient, token, amount, minPrice, maxPrice, executeAt, 0);
     }
 
-    /// @notice The payer asks the Schedule Service system contract to call release at executeAt.
-    ///         The payer must still sign the schedule. The testnet proof of this call is ScheduleProbe
-    ///         0.0.10832802, which paid plan 2 of 0.0.10820921. This function was not on that deployment.
+    /// @notice The payer asks the Schedule Service system contract to call release.
+    ///         Hedera fires 30 seconds after executeAt. The payer must sign the schedule
+    ///         or the network returns INVALID_PAYER_SIGNATURE and the escrow stays.
+    ///         BandPay 0.0.10839717 created schedule 0.0.10839746. The payer signed it.
+    ///         Hedera paid plan 1. ScheduleProbe 0.0.10832802 is an earlier proof, not this bytecode.
     function scheduleRelease(uint256 id) external returns (address schedule) {
         Plan storage plan = plans[id];
         if (!plan.funded || plan.paid || plan.cancelled) revert BadState();
         if (msg.sender != plan.payer) revert NotPayer();
         if (block.timestamp >= plan.executeAt) revert BadState();
+        // Fire after the deadline. An equal timestamp has reverted TooEarly on testnet.
+        uint256 when = plan.executeAt + 30;
         bytes memory callData = abi.encodeWithSignature("release(uint256)", id);
         (bool ok, bytes memory data) = HSS.call(
             abi.encodeWithSelector(
                 IHederaScheduleService.scheduleCallWithPayer.selector,
                 address(this),
                 plan.payer,
-                plan.executeAt,
-                uint256(500_000),
+                when,
+                uint256(1_000_000),
                 uint64(0),
                 callData
             )
