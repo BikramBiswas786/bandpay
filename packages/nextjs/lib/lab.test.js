@@ -57,8 +57,12 @@ test("new payment rows are runnable and are not claimed as testnet proofs", () =
   const series = rows.find((item) => item.id === "series");
   const attempt = rows.find((item) => item.id === "attempt");
   const receipt = rows.find((item) => item.id === "receipt");
-  for (const row of [usd, series, attempt, receipt]) {
+  for (const row of [usd]) {
     assert.equal(row.proof, "local simulation");
+    assert.doesNotMatch(row.command, /#/);
+  }
+  for (const row of [series, attempt, receipt]) {
+    assert.equal(row.proof, "testnet-proven");
     assert.doesNotMatch(row.command, /#/);
   }
   assert.match(usd.command, /USD_AMOUNT=0\.05/);

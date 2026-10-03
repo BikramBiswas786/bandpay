@@ -118,7 +118,7 @@ function labScenarios(live) {
       id: "usd",
       title: "Oracle sets the HBAR",
       kind: "simulation",
-      result: `A $0.05 invoice at ${chainlinkPrice.toFixed(4)} USD pays ${(0.05 / chainlinkPrice).toFixed(4)} HBAR and refunds the rest of the escrow. Local test only. No testnet schedule proves fundHbarUsd yet.`,
+      result: `A $0.05 invoice at ${chainlinkPrice.toFixed(4)} USD pays ${(0.05 / chainlinkPrice).toFixed(4)} HBAR and refunds the rest of the escrow. That refund is the local test. On testnet the public pool is not a dollar, so attempt 0x029f5ae690d38c8f70c0f38c35a79bbde13c20cddd98022004b04fb7063d8fb0 succeeded and the payment was PoolOff.`,
       ok: true,
       test: "pays a USD amount of HBAR and refunds the rest of the escrow",
       where: "packages/hardhat/contracts/BandPay.sol fundHbarUsd",
@@ -131,14 +131,14 @@ function labScenarios(live) {
       title: "One escrow, two schedules",
       kind: "simulation",
       result:
-        "0.2 HBAR splits into two plans of 0.1. The two amounts add up to the escrow. A thirteenth instalment is refused. Local test only.",
+        "0.2 HBAR splits into two plans of 0.1. Schedule 0.0.10846975 executed release on the first plan. Schedule 0.0.10846976 is the second. Payer 0.0.10721162. A thirteenth instalment is still refused.",
       ok: true,
       test: "splits one escrow into instalments",
       where:
         "packages/hardhat/contracts/BandPay.sol fundHbarInstallments, packages/schedule/series.js",
       command:
         "export COUNT=2\nexport EVERY_SECONDS=2592000\nexport AMOUNT_HBAR=0.2\nexport MIN_USD=0.05\nexport MAX_USD=0.20\nexport DUE_IN_SECONDS=90\nnode packages/hardhat/scripts/fund.js",
-      proof: "local simulation",
+      proof: "testnet-proven",
     },
     {
       id: "pool",
@@ -157,26 +157,26 @@ function labScenarios(live) {
       title: "The call succeeds and the payment does not",
       kind: "simulation",
       result:
-        "attempt catches OutsideBand, Disagree, NoPrice, TooEarly, and Underfunded. The transaction status is success. The Attempted event says paid is false and carries the revert bytes. The escrow stays. Local test only.",
+        "attempt catches the refusal. The transaction status is success and Attempted says paid is false. On testnet, 0x8684a474e26874dcc5872bf7a6ca68f15e64602a6bd64c17d1fae74f29ba4ff2 is OutsideBand. The escrow stays. A successful attempt payment is still the local test.",
       ok: false,
       test: "records a refusal without undoing the escrow",
       where: "packages/hardhat/contracts/BandPay.sol attempt",
       command:
         'npm test --workspace=@bandpay/hardhat -- --grep "records a refusal without undoing the escrow"',
-      proof: "local simulation",
+      proof: "testnet-proven",
     },
     {
       id: "receipt",
       title: "The HCS note is written after the mirror",
       kind: "simulation",
       result:
-        "The contract cannot write the topic. Read the schedule on the mirror first. Then this script submits {template, planId, result, scheduleId}. Topic 0.0.10832517 already has the five earlier results. A new message is not the same as those five.",
+        "The contract cannot write the topic. Topic 0.0.10847013 has the instalment payment and the two attempt refusals, written after the mirror result. It is not the same topic as the first five messages.",
       ok: true,
       test: "a reverted attempt fits in one HCS message",
       where: "packages/schedule/receipt.mjs",
       command:
         "export BANDPAY_TOPIC_ID=0.0.YOUR_TOPIC\nexport HEDERA_OPERATOR_ID=0.0.YOUR_ACCOUNT\nexport HEDERA_OPERATOR_KEY=0xYOUR_KEY\nexport PLAN_ID=0\nexport RESULT=reverted\nexport SCHEDULE_ID=0.0.YOUR_SCHEDULE\nnode packages/schedule/receipt.mjs",
-      proof: "local simulation",
+      proof: "testnet-proven",
     },
   ];
 }

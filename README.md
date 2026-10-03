@@ -77,6 +77,8 @@ Five schedules. Each one is Hedera calling `release`.
 
 The same five results are on [HCS topic 0.0.10832517](https://hashscan.io/testnet/topic/0.0.10832517). The longer table, with the contract addresses, is under [Testnet](#testnet).
 
+The current contract is [0.0.10846968](https://hashscan.io/testnet/contract/0.0.10846968). The payer is `0.0.10721162`, not `0.0.10015230`. [Schedule 0.0.10846975](https://hashscan.io/testnet/schedule/0.0.10846975) executed `release` on the first of two instalments. [Schedule 0.0.10846976](https://hashscan.io/testnet/schedule/0.0.10846976) is the second. [This attempt](https://hashscan.io/testnet/transaction/0x8684a474e26874dcc5872bf7a6ca68f15e64602a6bd64c17d1fae74f29ba4ff2) succeeded and the payment was `OutsideBand`. [This attempt](https://hashscan.io/testnet/transaction/0x029f5ae690d38c8f70c0f38c35a79bbde13c20cddd98022004b04fb7063d8fb0) succeeded and the dollar invoice was `PoolOff`, because the public testnet pool is not a dollar. The successful dollar refund is still the local test. Those three notes are on [topic 0.0.10847013](https://hashscan.io/testnet/topic/0.0.10847013).
+
 ## Video
 
 2:20. Under the five-minute limit. The live desk on Vercel, then one executed schedule on Hashscan, then `npm run demo` in a fresh scaffold. No Hedera account for that command.
